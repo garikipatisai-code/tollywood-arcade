@@ -8,6 +8,12 @@
   "minFrames": 0,
   "tint": 16768250,
   "requiredShards": ["powder", "cannon"],
+  "hazards": [
+    { "id": "vent-1", "x": 380, "y": 300, "r": 24, "period": 120, "on": 55 },
+    { "id": "vent-2", "x": 580, "y": 300, "r": 24, "period": 120, "on": 55 },
+    { "id": "vent-3", "x": 380, "y": 200, "r": 24, "period": 120, "on": 55 },
+    { "id": "vent-4", "x": 580, "y": 200, "r": 24, "period": 120, "on": 55 }
+  ],
   "waves": [
     { "atSeconds": 3, "kind": "boss", "count": 1, "pattern": "top", "hp": 8 },
     { "atSeconds": 50, "kind": "spray", "count": 2, "pattern": "sides" }

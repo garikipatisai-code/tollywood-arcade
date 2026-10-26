@@ -54,6 +54,7 @@ export interface WorldTheme {
   workshop?: boolean;
   highway?: boolean;
   mansion?: boolean;
+  finale?: boolean;
   sanctum?: boolean;
   ash?: number;
   nets?: { x: number; w: number; h: number }[];
@@ -283,15 +284,20 @@ export const THEMES: Record<string, WorldTheme> = {
     castles: false,
     props: [
       { tex: 'dung-56', x: 150, y: 480, scale: 3, tint: BERING },
-      { tex: 'dung-69', x: 810, y: 470, scale: 3, tint: BERING }
+      { tex: 'dung-69', x: 810, y: 470, scale: 3, tint: BERING },
+      { tex: 'dung-69', x: 110, y: 470, scale: 3, tint: BERING },
+      { tex: 'dung-69', x: 195, y: 482, scale: 3, tint: BERING }
     ],
     clouds: 1,
     glows: [
-      { x: 240, y: 400, color: 0xff6a2e, scale: 3 },
-      { x: 480, y: 120, color: 0xffd94d, scale: 2.4 },
-      { x: 720, y: 400, color: 0xff6a2e, scale: 3 }
+      { x: 240, y: 400, color: 0xff6a2e, scale: 2 },
+      { x: 480, y: 120, color: 0xffd94d, scale: 1.8 },
+      { x: 720, y: 400, color: 0xff6a2e, scale: 2 },
+      { x: 830, y: 250, color: 0xffd94d, scale: 1.8 },
+      { x: 480, y: 190, color: 0xffb060, scale: 2 }
     ],
-    torchAtGlows: false
+    torchAtGlows: false,
+    finale: true
   }
 };
 
@@ -699,6 +705,73 @@ export function buildWorld(scene: Phaser.Scene, themeKey: string, opts: { glows?
     deco.fillEllipse(45, 330, 66, 30);
     deco.fillStyle(0xa8e6f0, 0.8);
     deco.fillEllipse(36, 326, 30, 8);
+  }
+
+  if (theme.finale) {
+    // Powder-barrel battery stencil.
+    deco.fillStyle(0x2e1a0e, 1);
+    deco.fillRect(88, 430, 130, 26);
+    scene.add
+      .text(153, 443, 'POWDER', {
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: '17px',
+        color: '#e8b93d'
+      })
+      .setOrigin(0.5)
+      .setDepth(-9);
+    // Matchbox altar with one lit match.
+    deco.fillStyle(0x8e2f2f, 1);
+    deco.fillRoundedRect(796, 226, 76, 34, 4);
+    deco.fillStyle(0xe8d8b0, 1);
+    deco.fillRect(872, 230, 26, 26);
+    deco.lineStyle(4, 0xe8d8b0, 1);
+    deco.lineBetween(810, 300, 830, 262);
+    deco.lineBetween(850, 300, 846, 262);
+    deco.fillStyle(0xe07b39, 1);
+    deco.fillCircle(830, 256, 6);
+    deco.fillStyle(0xffd94d, 1);
+    deco.fillCircle(830, 254, 3);
+    // Brass cannon on carriage, aimed skyward at the shard.
+    deco.fillStyle(0x4a2f1d, 1);
+    deco.fillCircle(440, 232, 20);
+    deco.fillCircle(520, 232, 20);
+    deco.fillStyle(0x8a8578, 1);
+    deco.fillCircle(440, 232, 8);
+    deco.fillCircle(520, 232, 8);
+    deco.fillStyle(0x5a3a20, 1);
+    deco.fillRect(430, 214, 100, 12);
+    deco.fillStyle(0x8a6a2a, 1);
+    deco.fillTriangle(452, 214, 488, 214, 470, 150);
+    deco.fillStyle(0xe8b93d, 1);
+    deco.fillTriangle(462, 214, 478, 214, 470, 162);
+    deco.fillStyle(0x2e1a0e, 1);
+    deco.fillCircle(470, 152, 7);
+    // Steel ball pyramid.
+    deco.fillStyle(0x8a8a9a, 1);
+    deco.fillCircle(566, 226, 9);
+    deco.fillCircle(584, 226, 9);
+    deco.fillCircle(575, 211, 9);
+    deco.fillStyle(0xc9c9d9, 1);
+    deco.fillCircle(563, 223, 3);
+    deco.fillCircle(581, 223, 3);
+    // Oxygen cylinder near the top.
+    deco.fillStyle(0x2e6e6e, 1);
+    deco.fillRoundedRect(742, 40, 36, 90, 12);
+    deco.fillStyle(0x6ec6c6, 1);
+    deco.fillRect(748, 52, 8, 66);
+    deco.fillStyle(0x8a8598, 1);
+    deco.fillRect(755, 28, 10, 14);
+    deco.fillCircle(760, 26, 6);
+    // Ember fuse trail from altar to cannon.
+    const fuse: [number, number][] = [];
+    for (let i = 0; i <= 24; i++) {
+      const t = i / 24;
+      fuse.push([830 + (500 - 830) * t, 280 + (200 - 280) * t + Math.sin(t * Math.PI * 3) * 26]);
+    }
+    fuse.forEach(([fx, fy], i) => {
+      deco.fillStyle(i % 2 === 0 ? 0xe07b39 : 0xffd94d, 1);
+      deco.fillCircle(fx, fy, 3.5);
+    });
   }
 
   if (theme.highway) {    // City-glow horizon + asphalt with lane dashes.    // City-glow horizon + asphalt with lane dashes.

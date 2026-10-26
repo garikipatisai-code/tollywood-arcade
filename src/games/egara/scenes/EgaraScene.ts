@@ -373,6 +373,25 @@ export class EgaraScene extends Phaser.Scene {
       this.shake.add(0.8);
     }
 
+    if (chapter.id === 'ch8') {
+      this.cameras.main.flash(350, 255, 240, 220);
+      this.cameras.main.shake(700, 0.012);
+      for (const [bx, by] of [[480, 160], [380, 220], [580, 220], [480, 300], [300, 160]] as const) {
+        this.fx?.killBurst(bx, by, true);
+      }
+      const best = save.chapters[chapter.id]?.best ?? this.world.score;
+      const menu = () => {
+        if (!this.scene.isActive()) return;
+        this.hud.showMenu(
+          translate(save.lang, 'story.complete'),
+          `${translate(save.lang, 'game.score')}: ${this.world.score} · ${translate(save.lang, 'game.best', { score: best })} · ${translate(save.lang, 'story.amulet.name')}`,
+          false
+        );
+      };
+      this.time.delayedCall(1400, menu);
+      return;
+    }
+
     const best = save.chapters[chapter.id]?.best ?? this.world.score;
     this.hud.showMenu(
       translate(save.lang, 'story.complete'),

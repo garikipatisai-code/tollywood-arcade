@@ -178,4 +178,11 @@ describe('chapters 6-8', () => {
     const result = playChapter(ch7);
     expect(result.status).toBe('complete');
   });
+
+  it('ch8 vents the cannon alley but still clears', () => {
+    const ch8 = CHAPTERS[7];
+    expect(ch8.hazards).toHaveLength(4);
+    const result = playChapter(ch8);
+    expect(result.status).toBe('complete');
+  });
 });
