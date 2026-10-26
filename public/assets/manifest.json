@@ -1,0 +1,49 @@
+{
+  "game": "egara",
+  "license": "CC0-1.0",
+  "assets": [
+    {
+      "file": "egara/sprites.png",
+      "kind": "image",
+      "author": "Tollywood Arcade",
+      "source": "original",
+      "license": "CC0-1.0",
+      "note": "5 frames, 16x16: fly, swatter, spray, spider, boss"
+    },
+    {
+      "file": "egara/sting.wav",
+      "kind": "audio",
+      "author": "Tollywood Arcade",
+      "source": "original, synthesised",
+      "license": "CC0-1.0"
+    },
+    {
+      "file": "egara/hit.wav",
+      "kind": "audio",
+      "author": "Tollywood Arcade",
+      "source": "original, synthesised",
+      "license": "CC0-1.0"
+    },
+    {
+      "file": "egara/boss.wav",
+      "kind": "audio",
+      "author": "Tollywood Arcade",
+      "source": "original, synthesised",
+      "license": "CC0-1.0"
+    },
+    {
+      "file": "egara/win.wav",
+      "kind": "audio",
+      "author": "Tollywood Arcade",
+      "source": "original, synthesised",
+      "license": "CC0-1.0"
+    },
+    {
+      "file": "egara/lose.wav",
+      "kind": "audio",
+      "author": "Tollywood Arcade",
+      "source": "original, synthesised",
+      "license": "CC0-1.0"
+    }
+  ]
+}

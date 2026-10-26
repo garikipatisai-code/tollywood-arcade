@@ -1,0 +1,174 @@
+:root {
+  color-scheme: dark;
+  --bg: #0d0b12;
+  --panel: #171320;
+  --ink: #f3ecdd;
+  --muted: #a99bb5;
+  --accent: #e8b04b;
+  --line: #352b45;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: radial-gradient(circle at 50% 0%, #241a2e, var(--bg) 60%);
+  color: var(--ink);
+  font-family: system-ui, sans-serif;
+  line-height: 1.4;
+}
+
+.ta-header,
+#app {
+  width: min(960px, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+.ta-header {
+  padding-block: 3rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.ta-header__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.ta-lang {
+  border: 1px solid var(--accent);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--accent);
+  padding: 0.4rem 0.8rem;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ta-lang:hover,
+.ta-lang:focus-visible {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.ta-footer {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+
+.ta-credits {
+  margin-top: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--panel);
+  padding: 1rem 1.5rem;
+}
+
+.ta-credits h2 {
+  margin-top: 0;
+  font-size: 1.2rem;
+  color: var(--accent);
+}
+
+.ta-credits ul {
+  padding-left: 1.2rem;
+}
+
+.ta-credits code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+}
+
+.ta-header h1 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  letter-spacing: -0.02em;
+  color: var(--accent);
+}
+
+.ta-header p {
+  margin: 0;
+  color: var(--muted);
+  max-width: 60ch;
+}
+
+#app {
+  padding-block: 1.5rem 4rem;
+}
+
+.ta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ta-card {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--panel);
+  padding: 1rem 1.25rem;
+}
+
+.ta-card a {
+  display: grid;
+  gap: 0.25rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.ta-card a:hover strong,
+.ta-card a:focus-visible strong {
+  color: var(--accent);
+}
+
+.ta-card strong {
+  font-size: 1.25rem;
+}
+
+.ta-year {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+
+.ta-genre {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.ta-card--locked {
+  opacity: 0.55;
+}
+
+.ta-card--locked strong::after {
+  content: ' ·';
+}
+
+.ta-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.ta-404 {
+  padding-block: 4rem;
+}
+
+a {
+  color: var(--accent);
+}

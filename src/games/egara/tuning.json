@@ -1,0 +1,28 @@
+{
+  "width": 960,
+  "height": 540,
+  "runSeconds": 90,
+  "player": { "speed": 290, "radius": 12, "lives": 3, "invulnFrames": 90 },
+  "bullet": { "speed": 760, "radius": 5, "lifeFrames": 45, "cooldownFrames": 8, "damage": 1 },
+  "enemies": {
+    "swatter": { "hp": 1, "radius": 26, "speed": 95, "score": 100 },
+    "spray": { "hp": 1, "radius": 20, "speed": 150, "score": 150 },
+    "spider": { "hp": 3, "radius": 24, "speed": 75, "score": 250 },
+    "boss": { "hp": 28, "radius": 64, "speed": 50, "score": 2000 }
+  },
+  "pools": { "enemies": 24, "bullets": 48 },
+  "waves": [
+    { "atSeconds": 0, "kind": "swatter", "count": 2, "pattern": "top" },
+    { "atSeconds": 8, "kind": "spray", "count": 2, "pattern": "sides" },
+    { "atSeconds": 16, "kind": "swatter", "count": 3, "pattern": "random" },
+    { "atSeconds": 24, "kind": "spider", "count": 1, "pattern": "top" },
+    { "atSeconds": 32, "kind": "spray", "count": 3, "pattern": "sides" },
+    { "atSeconds": 40, "kind": "swatter", "count": 4, "pattern": "random" },
+    { "atSeconds": 48, "kind": "spider", "count": 2, "pattern": "top" },
+    { "atSeconds": 54, "kind": "spray", "count": 4, "pattern": "sides" },
+    { "atSeconds": 60, "kind": "boss", "count": 1, "pattern": "top" },
+    { "atSeconds": 72, "kind": "swatter", "count": 3, "pattern": "random" },
+    { "atSeconds": 80, "kind": "spider", "count": 2, "pattern": "top" },
+    { "atSeconds": 86, "kind": "spray", "count": 2, "pattern": "sides" }
+  ]
+}

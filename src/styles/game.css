@@ -1,0 +1,203 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+
+#game-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: #f3ecdd;
+  font-family: system-ui, sans-serif;
+}
+
+#game-container canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.ta-hud {
+  position: absolute;
+  inset: 0 0 auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.ta-hud__stats {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  font-family: ui-monospace, monospace;
+  font-size: 0.95rem;
+  text-shadow: 0 1px 2px #000;
+}
+
+.ta-hud__stat {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+.ta-hud__label {
+  color: #a99bb5;
+}
+
+.ta-hud__value {
+  color: #f3ecdd;
+}
+
+.ta-hud__pause,
+.ta-hud__button {
+  pointer-events: auto;
+  border: 1px solid #4a3c5e;
+  border-radius: 0.5rem;
+  background: #171320;
+  color: #f3ecdd;
+  padding: 0.4rem 0.85rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ta-hud__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ta-hud__pause:hover,
+.ta-hud__pause:focus-visible,
+.ta-hud__button:hover,
+.ta-hud__button:focus-visible {
+  border-color: #e8b04b;
+  color: #e8b04b;
+}
+
+.ta-controls {
+  margin-top: 0.5rem;
+  text-align: left;
+  background: rgb(23 19 32 / 80%);
+  border: 1px solid #352b45;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+}
+
+.ta-controls[hidden] {
+  display: none;
+}
+
+.ta-controls__title {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  color: #a99bb5;
+}
+
+.ta-controls__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.ta-controls__row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1fr) auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.ta-controls__keys {
+  font-family: ui-monospace, monospace;
+  color: #f3ecdd;
+  background: #0d0b12;
+  border: 1px solid #352b45;
+  border-radius: 0.35rem;
+  padding: 0.1rem 0.4rem;
+}
+
+.ta-controls__change {
+  border: 1px solid #4a3c5e;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: #f3ecdd;
+  padding: 0.2rem 0.6rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ta-controls__change:disabled {
+  opacity: 0.5;
+}
+
+.ta-menu {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  text-align: center;
+  background: rgb(13 11 18 / 82%);
+  z-index: 3;
+}
+
+.ta-menu[hidden] {
+  display: none;
+}
+
+.ta-menu__title {
+  margin: 0;
+  font-size: clamp(1.6rem, 5vw, 2.6rem);
+  color: #e8b04b;
+}
+
+.ta-menu__body {
+  margin: 0;
+  color: #f3ecdd;
+}
+
+.ta-menu__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.ta-button {
+  display: inline-block;
+  border: 1px solid #e8b04b;
+  border-radius: 0.5rem;
+  background: #e8b04b;
+  color: #120f18;
+  padding: 0.5rem 1.1rem;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ta-button--ghost {
+  background: transparent;
+  color: #e8b04b;
+}
+
+.ta-button:focus-visible {
+  outline: 3px solid #f3ecdd;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto;
+  }
+}
