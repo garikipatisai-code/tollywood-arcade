@@ -36,6 +36,7 @@ npm run assets   # per-game assets ≤5 MiB, licences present
 | v3.0 | — | — | — | — | — | — | hub 2.3 KB gz, egara 361 KB gz, assets 2.1 MB; auto-tier verified degrading headless; device run still pending |
 | v3.1-ch1 | — | — | — | — | — | — | wind-gust sim green; street screenshot-verified; budgets hold; live 200 |
 | v3.2-ch2 | — | — | — | — | — | — | updrafts reuse wind; bedroom screenshot-verified; budgets hold; live 200 |
+| v3.3-ch3 | — | — | — | — | — | — | training gates; workbench screenshot-verified; budgets hold; live 200 |
 
 Automated numbers are not a substitute for the manual row; leave it blank until
 the device run happens.
