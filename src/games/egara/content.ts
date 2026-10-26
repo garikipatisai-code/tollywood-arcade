@@ -9,6 +9,14 @@ import ch5 from './chapters/ch5.json';
 import ch6 from './chapters/ch6.json';
 import ch7 from './chapters/ch7.json';
 import ch8 from './chapters/ch8.json';
+import cut1 from './cutscenes/ch1.json';
+import cut2 from './cutscenes/ch2.json';
+import cut3 from './cutscenes/ch3.json';
+import cut4 from './cutscenes/ch4.json';
+import cut5 from './cutscenes/ch5.json';
+import cut6 from './cutscenes/ch6.json';
+import cut7 from './cutscenes/ch7.json';
+import cut8 from './cutscenes/ch8.json';
 
 export const EGARA_TUNING: Tuning = raw;
 
@@ -76,6 +84,70 @@ function toChapter(rawChapter: unknown): Chapter {
 }
 
 export const CHAPTERS: Chapter[] = [ch1, ch2, ch3, ch4, ch5, ch6, ch7, ch8].map(toChapter);
+
+export type CutMood = 'dawn' | 'ember' | 'night' | 'toxic' | 'gloom' | 'teal';
+
+export interface CutPanel {
+  img: string | null;
+  mood: CutMood;
+  caption: string;
+}
+
+export interface Cutscene {
+  id: string;
+  panels: CutPanel[];
+}
+
+/** Vendor art allowed in comic panels (key → path under assets/vendor/kenney). */
+export const CUT_ART: Record<string, string> = {
+  'cloud-1': 'bg/cloud1.png',
+  'cloud-2': 'bg/cloud2.png',
+  'cloud-3': 'bg/cloud3.png',
+  'cloud-4': 'bg/cloud4.png',
+  'grass-1': 'bg/grass1.png',
+  'tree-3': 'bg/tree03.png',
+  'tree-4': 'bg/tree04.png',
+  'castle-grey': 'bg/castle_grey.png',
+  'castle-beige': 'bg/castle_beige.png',
+  'glow-light': 'particles/light_01.png',
+  'glow-flame': 'particles/flame_01.png'
+};
+
+const CUT_MOODS: CutMood[] = ['dawn', 'ember', 'night', 'toxic', 'gloom', 'teal'];
+
+export const CUTSCENES: Cutscene[] = [cut1, cut2, cut3, cut4, cut5, cut6, cut7, cut8].map(
+  (raw) => ({
+    id: String((raw as Record<string, unknown>).id ?? ''),
+    panels: ((raw as Record<string, unknown>).panels ?? []) as CutPanel[]
+  })
+);
+
+/** Schema check for cutscene data. Empty list = valid. */
+export function validateCutscene(raw: unknown): string[] {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return ['cutscene must be an object'];
+  }
+  const cut = raw as Partial<Cutscene>;
+  const errors: string[] = [];
+  if (!cut.id) errors.push('id is required');
+  if (!Array.isArray(cut.panels) || cut.panels.length < 2 || cut.panels.length > 4) {
+    errors.push(`${cut.id || '?'}: panels must number 2-4`);
+    return errors;
+  }
+  cut.panels.forEach((panel, index) => {
+    const at = `${cut.id || '?'} panel ${index}`;
+    if (!panel || typeof panel !== 'object') {
+      errors.push(`${at}: must be an object`);
+      return;
+    }
+    if (panel.img !== null && !(panel.img in CUT_ART)) errors.push(`${at}: unknown art ${panel.img}`);
+    if (!CUT_MOODS.includes(panel.mood)) errors.push(`${at}: bad mood ${panel.mood}`);
+    if (typeof panel.caption !== 'string' || !/^cut\.ch\d+\.p\d+$/.test(panel.caption)) {
+      errors.push(`${at}: bad caption key ${panel.caption}`);
+    }
+  });
+  return errors;
+}
 
 /** Schema check for chapter data. Returns a list of problems, empty when valid. */
 export function validateChapter(raw: unknown): string[] {

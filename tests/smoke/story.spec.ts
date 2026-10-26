@@ -18,6 +18,8 @@ test('chapter select lists 8 chapters with ch1 open', async ({ page }) => {
 
   await ch1.click();
   await expect(page).toHaveURL(/ch=ch1/);
+  await expect(page.getByRole('dialog')).toContainText('Gali ran petals');
+  await page.getByRole('button', { name: 'Skip' }).click();
   await expect(page.getByRole('dialog')).toContainText('Gather 3 petals');
 
   expect(errors).toEqual([]);
@@ -49,5 +51,30 @@ test('saved progress unlocks later chapters and NG+ appears with the amulet', as
 
   await dialog.locator('button[data-chapter="ch2"]').click();
   await expect(page).toHaveURL(/ch=ch2/);
+  await expect(page.getByRole('dialog')).toContainText('Magnate');
+  await page.getByRole('button', { name: 'Skip' }).click();
   await expect(page.getByRole('dialog')).toContainText('memory shards');
+});
+
+test('chapter opens with its comic cutscene', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'tollywood-arcade.save',
+      JSON.stringify({
+        v: 2, lang: 'en', muted: true, best: {}, remaps: {}, chapters: {},
+        shards: [], unlocks: { needle: false, armor: false, cannon: false }, amulet: false
+      })
+    );
+  });
+
+  await page.goto('./games/egara/?ch=ch1');
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Gali ran petals');
+  await expect(dialog).toContainText('1 / 3');
+
+  await dialog.getByRole('button', { name: 'Continue' }).click();
+  await expect(dialog).toContainText('2 / 3');
+
+  await dialog.getByRole('button', { name: 'Skip' }).click();
+  await expect(dialog).toContainText('Ordinary Skies');
 });

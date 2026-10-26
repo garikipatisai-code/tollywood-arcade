@@ -1,0 +1,8 @@
+{
+  "id": "ch4",
+  "panels": [
+    { "img": "castle-beige", "mood": "night", "caption": "cut.ch4.p1" },
+    { "img": null, "mood": "ember", "caption": "cut.ch4.p2" },
+    { "img": "glow-flame", "mood": "ember", "caption": "cut.ch4.p3" }
+  ]
+}

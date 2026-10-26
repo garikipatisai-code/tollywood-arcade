@@ -1,0 +1,8 @@
+{
+  "id": "ch2",
+  "panels": [
+    { "img": "castle-grey", "mood": "night", "caption": "cut.ch2.p1" },
+    { "img": null, "mood": "gloom", "caption": "cut.ch2.p2" },
+    { "img": "glow-light", "mood": "teal", "caption": "cut.ch2.p3" }
+  ]
+}

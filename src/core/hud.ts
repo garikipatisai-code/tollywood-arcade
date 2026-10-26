@@ -9,6 +9,7 @@ export interface HudLabels {
   mute: string;
   unmute: string;
   story?: string;
+  quality?: string;
   controls: string;
   change: string;
   capturing: string;
@@ -18,6 +19,12 @@ export interface ControlRow {
   action: string;
   label: string;
   keys: string[];
+}
+
+export interface CutPanelView {
+  imgUrl: string | null;
+  mood: string;
+  caption: string;
 }
 
 export interface Hud {
@@ -36,6 +43,9 @@ export interface Hud {
   onResume(handler: () => void): void;
   onRetry(handler: () => void): void;
   onNext(handler: () => void): void;
+  onQuality(handler: () => void): void;
+  setQualityLabel(text: string): void;
+  showCutscene(panels: CutPanelView[], skipLabel: string, nextLabel: string, onDone: () => void): void;
   renderChapterSelect(
     model: ChapterSelectModel,
     onPick: (id: string) => void,
@@ -101,10 +111,14 @@ export function createHud(labels: HudLabels): Hud {
   muteButton.setAttribute('aria-pressed', 'false');
   muteButton.textContent = labels.mute;
 
+  const qualityButton = element('button', 'ta-hud__button');
+  qualityButton.type = 'button';
+  qualityButton.textContent = labels.quality ?? 'FX';
+
   const pauseButton = element('button', 'ta-hud__button');
   pauseButton.type = 'button';
   pauseButton.textContent = labels.pause;
-  hudActions.append(muteButton, pauseButton);
+  hudActions.append(muteButton, qualityButton, pauseButton);
 
   const menu = element('div', 'ta-menu');
   menu.hidden = true;
@@ -222,6 +236,83 @@ export function createHud(labels: HudLabels): Hud {
     onNext(handler: () => void) {
       next.onclick = handler;
     },
+    showCutscene(panels: CutPanelView[], skipLabel: string, nextLabel: string, onDone: () => void) {
+      const moods: Record<string, string> = {
+        dawn: 'linear-gradient(180deg,#3a5a9e 0%,#e08a4e 100%)',
+        ember: 'linear-gradient(180deg,#38140e 0%,#e06a2e 100%)',
+        night: 'linear-gradient(180deg,#0e1028 0%,#3a4a7e 100%)',
+        toxic: 'linear-gradient(180deg,#1e3e1e 0%,#6eae4e 100%)',
+        gloom: 'linear-gradient(180deg,#140e28 0%,#4a2a6e 100%)',
+        teal: 'linear-gradient(180deg,#1d3a4e 0%,#4a8e8e 100%)'
+      };
+      const overlay = element('div', 'ta-menu');
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+
+      let index = 0;
+      const render = () => {
+        overlay.replaceChildren();
+        const panel = panels[Math.min(index, panels.length - 1)];
+
+        const card = element('div', 'ta-menu__title');
+        card.textContent = '';
+        card.style.cssText =
+          `width:min(640px,86vw);height:300px;margin:0 auto;border-radius:12px;` +
+          `border:1px solid #4a3c5e;background:${moods[panel.mood] ?? moods.night};` +
+          `display:flex;align-items:flex-end;justify-content:center;overflow:hidden;position:relative;`;
+
+        if (panel.imgUrl) {
+          const img = document.createElement('img');
+          img.src = panel.imgUrl;
+          img.alt = '';
+          img.style.cssText =
+            'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.85;image-rendering:pixelated;';
+          card.append(img);
+        }
+
+        const caption = element('p', 'ta-menu__body');
+        caption.textContent = panel.caption;
+        caption.style.cssText =
+          'position:relative;z-index:1;margin:0;width:100%;padding:1.4rem 1rem 1rem;' +
+          'font-size:clamp(1.05rem,3.4vw,1.5rem);font-weight:700;color:#fff;' +
+          'text-shadow:0 2px 0 #000,0 0 18px #000;background:linear-gradient(transparent,rgba(5,3,10,.78));';
+
+        const dots = element('div', 'ta-menu__actions');
+        dots.textContent = `${index + 1} / ${panels.length}`;
+        (dots as HTMLElement).style.cssText = 'color:#a99bb5;font-size:.85rem;';
+        card.append(caption);
+
+        const row = element('div', 'ta-menu__actions');
+        const skip = element('button', 'ta-button ta-button--ghost');
+        skip.type = 'button';
+        skip.textContent = skipLabel;
+        skip.onclick = () => {
+          overlay.remove();
+          onDone();
+        };
+        const advance = element('button', 'ta-button');
+        advance.type = 'button';
+        advance.textContent = nextLabel;
+        advance.onclick = () => {
+          index++;
+          if (index >= panels.length) {
+            overlay.remove();
+            onDone();
+          } else {
+            render();
+            advance.focus();
+          }
+        };
+        row.append(skip, advance);
+
+        overlay.append(card, dots, row);
+      };
+
+      render();
+      const container = document.getElementById('game-container') ?? document.body;
+      container.append(overlay);
+      overlay.querySelector<HTMLButtonElement>('.ta-button:not(.ta-button--ghost)')?.focus();
+    },
     renderChapterSelect(model: ChapterSelectModel, onPick: (id: string) => void, onNg: () => void) {
       const section = element('div', 'ta-menu');
       section.setAttribute('role', 'dialog');
@@ -268,6 +359,12 @@ export function createHud(labels: HudLabels): Hud {
     },
     onMute(handler: () => void) {
       muteButton.onclick = handler;
+    },
+    onQuality(handler: () => void) {
+      qualityButton.onclick = handler;
+    },
+    setQualityLabel(text: string) {
+      qualityButton.textContent = text;
     }
   };
 }

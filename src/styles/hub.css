@@ -8,8 +8,27 @@
   --line: #352b45;
 }
 
+@font-face {
+  font-family: 'Kenney Future';
+  src: url('/tollywood-arcade/assets/vendor/kenney/Kenney Future Narrow.ttf') format('truetype');
+  font-display: swap;
+}
+
 * {
   box-sizing: border-box;
+}
+
+#embers {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.ta-header,
+#app {
+  position: relative;
+  z-index: 1;
 }
 
 body {
@@ -88,8 +107,58 @@ body {
 
 .ta-header h1 {
   margin: 0 0 0.5rem;
+  font-family: 'Kenney Future', system-ui, sans-serif;
   font-size: clamp(2rem, 6vw, 3.5rem);
-  letter-spacing: -0.02em;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+  text-shadow: 0 3px 0 #5e3a10, 0 0 28px rgb(232 176 75 / 35%);
+}
+
+.ta-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ta-gali {
+  display: inline-block;
+  width: 72px;
+  height: 72px;
+  overflow: hidden;
+  filter: drop-shadow(0 0 14px rgb(232 176 75 / 55%));
+}
+
+.ta-gali img {
+  width: 576px;
+  height: 72px;
+  max-width: none;
+  image-rendering: pixelated;
+  animation: gali-hover 0.7s steps(1) infinite;
+}
+
+@keyframes gali-hover {
+  0%, 49% { transform: translateX(0); }
+  50%, 100% { transform: translateX(-360px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ta-gali img {
+    animation: none;
+  }
+}
+
+.ta-card--live {
+  border-color: var(--accent);
+  box-shadow: 0 0 24px rgb(232 176 75 / 18%);
+}
+
+.ta-card--live:hover {
+  box-shadow: 0 0 34px rgb(232 176 75 / 35%);
+}
+
+.ta-progress {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
   color: var(--accent);
 }
 

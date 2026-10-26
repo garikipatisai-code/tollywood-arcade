@@ -8,9 +8,13 @@
     <link rel="stylesheet" href="./src/styles/hub.css" />
   </head>
   <body>
+    <canvas id="embers" aria-hidden="true"></canvas>
     <header class="ta-header">
       <div class="ta-header__top">
-        <h1 data-i18n="hub.title">Tollywood Arcade</h1>
+        <div class="ta-brand">
+          <span class="ta-gali" aria-hidden="true"><img src="./assets/egara/sprites.png" alt="" /></span>
+          <h1 data-i18n="hub.title">Tollywood Arcade</h1>
+        </div>
         <button id="lang-toggle" class="ta-lang" type="button" aria-label="Switch language">తెలుగు</button>
       </div>
       <p data-i18n="hub.subtitle">Six small games inspired by Telugu cinema eras. Original stories, art and music.</p>
@@ -19,12 +23,13 @@
     <main id="app">
       <h2 class="ta-visually-hidden">Games</h2>
       <ul id="game-list" class="ta-grid">
-        <li class="ta-card">
+        <li class="ta-card ta-card--live">
           <a href="./games/egara/">
             <span class="ta-year">2012</span>
             <strong data-i18n="egara.name">Egara</strong>
             <span class="ta-genre" data-i18n="genre.flyer">arcade flyer</span>
             <span class="ta-genre" data-i18n="story.select">Story</span>
+            <span class="ta-progress" id="egara-progress"></span>
           </a>
         </li>
         <li class="ta-card ta-card--locked">

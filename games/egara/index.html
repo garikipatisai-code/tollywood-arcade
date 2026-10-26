@@ -5,9 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Egara — Tollywood Arcade</title>
     <link rel="stylesheet" href="../../src/styles/game.css" />
+    <style>
+      #vignette {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(ellipse at center, transparent 52%, rgba(5, 3, 10, 0.5) 100%);
+        z-index: 1;
+      }
+    </style>
   </head>
   <body>
-    <div id="game-container"></div>
+    <div id="game-container"><div id="vignette" aria-hidden="true"></div></div>
     <script type="module" src="../../src/games/egara/main.ts"></script>
   </body>
 </html>

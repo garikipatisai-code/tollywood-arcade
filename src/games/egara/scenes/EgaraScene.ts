@@ -13,6 +13,14 @@ import {
 import { translate, type MessageKey } from '../../../core/i18n';
 import { HitStop, ScreenShake, buzzMix } from '../../../core/feel';
 import {
+  QUALITY,
+  initialTier,
+  nextTier,
+  persistQuality,
+  pickTier,
+  type QualityTier
+} from '../../../core/quality';
+import {
   loadSave,
   persistSave,
   withAmulet,
@@ -42,12 +50,26 @@ import {
   type SimInput,
   type World
 } from '../../../engines/shooter/sim';
-import { CHAPTERS, EGARA_TUNING, EGARA_WAVES, chapterStatus, type Chapter } from '../content';
+import { CHAPTERS, CUTSCENES, CUT_ART, EGARA_TUNING, EGARA_WAVES, chapterStatus, type Chapter } from '../content';
+import { MOODS, MusicEngine } from '../../../core/music';
+import { createFx, fxPreload, type Fx } from '../../../render/fx';
+import { buildWorld, worldPreload, type WorldView } from '../../../render/world';
 
 const CHAPTER_UNLOCKS: Record<string, (keyof Loadout)[]> = {
   ch3: ['needle'],
   ch5: ['armor'],
   ch8: ['cannon']
+};
+
+const CHAPTER_GRADES: Record<string, string> = {
+  ch1: 'saturate(1.15)',
+  ch2: 'saturate(1.1) hue-rotate(10deg)',
+  ch3: 'saturate(1.2) sepia(0.15)',
+  ch4: 'saturate(1.25) hue-rotate(-10deg)',
+  ch5: 'saturate(1.2)',
+  ch6: 'saturate(1.1) hue-rotate(-25deg) brightness(0.95)',
+  ch7: 'saturate(0.9) brightness(0.9) hue-rotate(15deg)',
+  ch8: 'saturate(1.3) sepia(0.2)'
 };
 
 const COLORS = {
@@ -58,7 +80,7 @@ const COLORS = {
 };
 
 const FRAME: Record<EnemyKind, number> = { swatter: 1, spray: 2, spider: 3, boss: 4 };
-const SOUND_KEYS = ['sting', 'hit', 'boss', 'win', 'lose', 'buzz'] as const;
+const SOUND_KEYS = ['sting', 'hit', 'boss', 'win', 'lose', 'buzz', 'shard', 'thud'] as const;
 
 export class EgaraScene extends Phaser.Scene {
   private world!: World;
@@ -88,6 +110,17 @@ export class EgaraScene extends Phaser.Scene {
   private ngplus = false;
   private chapterDone = false;
   private buzz: Phaser.Sound.BaseSound | null = null;
+  private lastSpeed = 0;
+  private worldView: WorldView | null = null;
+  private fx: Fx | null = null;
+  private music: MusicEngine | null = null;
+  private seenEvents = 0;
+  private tier: QualityTier = 'high';
+  private autoQuality = true;
+  private emaFps = 60;
+  private memGb: number | undefined;
+  private prevHp: number[] = [];
+  private popUntil: number[] = [];
 
   constructor(private readonly hud: Hud) {
     super('Egara');
@@ -95,8 +128,10 @@ export class EgaraScene extends Phaser.Scene {
 
   preload(): void {
     this.load.setPath(`${import.meta.env.BASE_URL}assets/egara`);
-    this.load.spritesheet('sprites', 'sprites.png', { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet('sprites', 'sprites.png', { frameWidth: 24, frameHeight: 24 });
     for (const key of SOUND_KEYS) this.load.audio(key, `${key}.wav`);
+    worldPreload(this.load);
+    fxPreload(this.load);
   }
 
   create(): void {
@@ -129,6 +164,17 @@ export class EgaraScene extends Phaser.Scene {
 
     this.cameras.main.setBackgroundColor(COLORS.bg);
     this.graphics = this.add.graphics();
+    this.tier = initialTier();
+    this.autoQuality = true;
+    this.emaFps = 60;
+    this.memGb = (globalThis.navigator as Navigator & { deviceMemory?: number })?.deviceMemory;
+    const settings = QUALITY[this.tier];
+    this.worldView = buildWorld(this, this.chapter ? this.chapter.id : 'sabotage', { glows: settings.glows });
+    this.fx = createFx(this, { rate: settings.particles, zoomPunches: settings.zoomPunches });
+    this.prevHp = this.world.enemies.map((enemy) => enemy.hp);
+    this.popUntil = this.world.enemies.map(() => 0);
+    const grade = this.chapter ? CHAPTER_GRADES[this.chapter.id] ?? '' : '';
+    this.game.canvas.style.filter = grade;
 
     this.playerSprite = this.add
       .image(0, 0, 'sprites', 0)
@@ -177,9 +223,19 @@ export class EgaraScene extends Phaser.Scene {
     this.hud.onMute(() => {
       const muted = this.audio.toggleMute();
       this.hud.setMuted(muted);
+      this.music?.setMuted(muted);
     });
+    this.hud.setQualityLabel(`FX: ${this.tier[0].toUpperCase()}${this.tier.slice(1)}`);
+    this.hud.onQuality(() => this.cycleQuality());
 
-    const unlock = bindUnlock(window, () => this.audio.unlock());
+    const chapterIndex = this.chapter ? CHAPTERS.findIndex((c) => c.id === this.chapter!.id) : -1;
+    this.music = new MusicEngine(MOODS[this.chapter ? this.chapter.id : 'sabotage'] ?? MOODS.sabotage, chapterIndex + 2);
+    this.music.setMuted(this.save.muted);
+
+    const unlock = bindUnlock(window, () => {
+      this.audio.unlock();
+      this.music?.start();
+    });
     this.detach.push(unlock, () => this.keyDetach?.(), () => this.stopCapture());
     this.attachKeys();
 
@@ -191,11 +247,29 @@ export class EgaraScene extends Phaser.Scene {
     if (this.chapter) {
       this.world.runFramesMax = this.chapter.timeSeconds * 60;
       this.paused = true;
-      this.hud.showMenu(
-        translate(this.save.lang, this.chapter.nameKey as MessageKey),
-        translate(this.save.lang, this.chapter.goalKey as MessageKey),
-        true
-      );
+      const cut = CUTSCENES.find((c) => c.id === this.chapter!.id);
+      const base = `${import.meta.env.BASE_URL}assets/vendor/kenney`;
+      const briefing = () => {
+        this.hud.showMenu(
+          translate(this.save.lang, this.chapter!.nameKey as MessageKey),
+          translate(this.save.lang, this.chapter!.goalKey as MessageKey),
+          true
+        );
+      };
+      if (cut) {
+        this.hud.showCutscene(
+          cut.panels.map((panel) => ({
+            imgUrl: panel.img ? `${base}/${CUT_ART[panel.img]}` : null,
+            mood: panel.mood,
+            caption: translate(this.save.lang, panel.caption as MessageKey)
+          })),
+          translate(this.save.lang, 'story.skip'),
+          translate(this.save.lang, 'story.continue'),
+          briefing
+        );
+      } else {
+        briefing();
+      }
     } else if (new URLSearchParams(window.location.search).get('select') === '1') {
       this.paused = true;
       this.hud.pauseButton.hidden = true;
@@ -290,14 +364,39 @@ export class EgaraScene extends Phaser.Scene {
     );
   }
 
+  private cycleQuality(): void {
+    this.autoQuality = false;
+    this.applyTier(nextTier(this.tier));
+    persistQuality(this.tier);
+  }
+
+  private applyTier(tier: QualityTier): void {
+    this.tier = tier;
+    const settings = QUALITY[tier];
+    this.worldView?.setGlows(settings.glows);
+    this.fx?.applyQuality(settings.particles, settings.zoomPunches);
+    this.hud.setQualityLabel(`FX: ${tier[0].toUpperCase()}${tier.slice(1)}`);
+  }
+
   update(_time: number, delta: number): void {
     this.frames++;
     const dt = Math.min(delta / 1000, 0.25);
     this.shake.update(dt);
+    this.worldView?.update(dt);
+
+    if (dt > 0) this.emaFps += (1 / dt - this.emaFps) * 0.05;
+    if (this.autoQuality && this.frames % 240 === 0 && this.frames > 0) {
+      const want = pickTier(this.emaFps, this.memGb);
+      if (want !== this.tier) this.applyTier(want);
+    }
 
     if (!this.paused && !this.ended) {
       this.simulate(dt, this.readInput());
+      if (QUALITY[this.tier].trail && this.world.player.alive && this.lastSpeed > 0.3) {
+        this.fx?.trail(this.world.player.x, this.world.player.y + 10);
+      }
     }
+    this.fx?.update(this.paused || this.ended ? 0 : dt);
 
     this.render(this.acc / STEP);
     this.refreshHud();
@@ -316,6 +415,8 @@ export class EgaraScene extends Phaser.Scene {
     const scoreBefore = this.world.score;
     const livesBefore = this.world.lives;
     const stingReady = input.sting && this.world.player.cooldownFrames === 0;
+    const aliveBefore = this.world.enemies.map((enemy) => enemy.alive);
+    const posBefore = this.world.enemies.map((enemy) => ({ x: enemy.x, y: enemy.y }));
 
     if (this.hitStop.consume()) return;
 
@@ -333,13 +434,27 @@ export class EgaraScene extends Phaser.Scene {
 
     this.acc = acc;
 
-    if (stingReady && steps > 0) this.audio.play('sting');
+    if (stingReady && steps > 0) {
+      this.audio.play('sting');
+      this.fx?.stingPuff(this.world.player.x, this.world.player.y - 24);
+    }
+    this.world.enemies.forEach((enemy, index) => {
+      if (aliveBefore[index] && !enemy.alive) {
+        this.fx?.killBurst(posBefore[index].x, posBefore[index].y, enemy.kind === 'boss');
+        this.fx?.punch();
+      } else if (enemy.alive && enemy.hp < this.prevHp[index]) {
+        this.fx?.hitSpark(enemy.x, enemy.y);
+        this.popUntil[index] = this.frames + 4;
+      }
+      this.prevHp[index] = enemy.hp;
+    });
     if (this.world.score > scoreBefore) {
       this.audio.play('hit');
       this.shake.add(0.35);
       this.hitStop.trigger(3);
     }
     if (this.world.lives < livesBefore) {
+      this.audio.play('thud');
       this.shake.add(0.6);
       this.hitStop.trigger(6);
     }
@@ -347,6 +462,7 @@ export class EgaraScene extends Phaser.Scene {
     if (!this.bossSeen && this.world.enemies.some((enemy) => enemy.alive && enemy.kind === 'boss')) {
       this.bossSeen = true;
       this.audio.play('boss');
+      this.fx?.bossIntro();
     }
   }
 
@@ -369,6 +485,7 @@ export class EgaraScene extends Phaser.Scene {
     const touch = this.dragOrigin ? this.drag : { x: 0, y: 0 };
     const axis = mergeAxes([keyboard, touch, this.readGamepad()]);
     const sting = this.inputMap.isDown('sting') || this.dragOrigin !== null;
+    this.lastSpeed = Math.hypot(axis.x, axis.y);
 
     return { x: axis.x, y: axis.y, sting };
   }
@@ -485,6 +602,13 @@ export class EgaraScene extends Phaser.Scene {
     const alive = this.world.enemies.filter((enemy) => enemy.alive).length;
     const mix = buzzMix(this.world.paranoia, Math.min(1, alive / 8));
     this.audio.tuneLoop(mix.gain * 0.5);
+    this.music?.setHeat(Math.max(this.world.paranoia / 100, Math.min(1, alive / 8)));
+
+    const fresh = this.world.events.slice(this.seenEvents);
+    this.seenEvents = this.world.events.length;
+    for (const event of fresh) {
+      if (event.type === 'shard') this.audio.play('shard');
+    }
   }
 
   private checkEnd(): void {
@@ -520,17 +644,10 @@ export class EgaraScene extends Phaser.Scene {
 
   private render(alpha: number): void {
     const g = this.graphics;
-    const { width, height } = EGARA_TUNING;
     const blend = Phaser.Math.Clamp(alpha, 0, 1);
     const { x: ox, y: oy } = this.shake.offset();
 
     g.clear();
-    g.fillStyle(COLORS.bg, 1);
-    g.fillRect(0, 0, width, height);
-
-    g.lineStyle(1, COLORS.grid, 0.8);
-    for (let x = 0; x <= width; x += 48) g.lineBetween(x, 0, x, height);
-    for (let y = 0; y <= height; y += 48) g.lineBetween(0, y, width, y);
 
     this.world.bullets.forEach((bullet, index) => {
       if (!bullet.alive) return;
@@ -564,21 +681,25 @@ export class EgaraScene extends Phaser.Scene {
       }
 
       const prev = this.prevEnemies[index];
+      const pop = this.frames < this.popUntil[index] ? 1.3 : 1;
+      const size = enemy.radius * 2 * pop;
       sprite
         .setVisible(true)
         .setFrame(FRAME[enemy.kind])
         .setTint(this.chapter?.tint ?? 0xffffff)
         .setPosition(lerp(prev.x, enemy.x, blend) + ox, lerp(prev.y, enemy.y, blend) + oy)
-        .setDisplaySize(enemy.radius * 2, enemy.radius * 2);
+        .setDisplaySize(size, size);
     });
 
     const player = this.world.player;
     const px = lerp(this.prevPlayer.x, player.x, blend);
     const py = lerp(this.prevPlayer.y, player.y, blend);
     const blink = player.invulnFrames > 0 && Math.floor(this.frames / 4) % 2 === 0;
+    const frame = player.invulnFrames > 0 ? 7 : this.lastSpeed > 0.6 ? 6 : Math.floor(this.frames / 10) % 2 === 0 ? 0 : 5;
 
     this.playerSprite
       .setVisible(player.alive && !blink)
+      .setFrame(frame)
       .setPosition(px + ox, py + oy)
       .setDisplaySize(EGARA_TUNING.player.radius * 2.4, EGARA_TUNING.player.radius * 2.4);
   }
@@ -586,6 +707,8 @@ export class EgaraScene extends Phaser.Scene {
   private teardown(): void {
     this.stopCapture();
     this.audio.stopLoop();
+    this.music?.stop();
+    this.game.canvas.style.filter = '';
     for (const off of this.detach) off();
     this.detach = [];
   }
