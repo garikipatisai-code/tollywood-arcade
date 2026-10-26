@@ -44,6 +44,13 @@
       "author": "Tollywood Arcade",
       "source": "original, synthesised",
       "license": "CC0-1.0"
+    },
+    {
+      "file": "egara/buzz.wav",
+      "kind": "audio",
+      "author": "Tollywood Arcade",
+      "source": "original, synthesised 85 Hz loop",
+      "license": "CC0-1.0"
     }
   ]
 }

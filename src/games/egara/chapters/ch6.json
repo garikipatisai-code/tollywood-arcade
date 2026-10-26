@@ -1,0 +1,22 @@
+{
+  "id": "ch6",
+  "nameKey": "story.ch6.name",
+  "goalKey": "story.ch6.goal",
+  "paranoia": 80,
+  "loadout": { "needle": true, "armor": true, "cannon": false },
+  "timeSeconds": 60,
+  "minFrames": 0,
+  "escapeAfter": 2700,
+  "tint": 13166329,
+  "requiredShards": [],
+  "waves": [
+    { "atSeconds": 3, "kind": "boss", "count": 1, "pattern": "top" },
+    { "atSeconds": 20, "kind": "spray", "count": 2, "pattern": "sides" }
+  ],
+  "shards": [],
+  "hazards": [
+    { "id": "ring-1", "x": 240, "y": 270, "r": 70, "period": 120, "on": 60 },
+    { "id": "ring-2", "x": 720, "y": 270, "r": 70, "period": 120, "on": 60 },
+    { "id": "ring-3", "x": 480, "y": 140, "r": 60, "period": 90, "on": 45 }
+  ]
+}

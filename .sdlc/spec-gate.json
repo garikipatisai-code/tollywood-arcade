@@ -1,12 +1,12 @@
 {
   "version": 1,
   "plan": "docs/plans/2026-10-26-story-mode.md",
-  "plan_sha256": "3d95ead8ba986f2ef22f7e4e8ade3fb26a70719c07539fb15738319f94f286a7",
+  "plan_sha256": "e73f63520f7ad24ef0f1210dff129da02c7d7ae70d9a051f751bb14a66487b67",
   "spec": "docs/specs/2026-10-26-egara-story-mode.md",
   "spec_sha256": "6350a51595d5293adaabe7ed2e35678a120b01191ba0dfa48f697365087f7bb6",
   "cli_sha256": "582b6b274b5d9b810f01d513a6791ab11541b89f2d25c5cc4a1a66737d1222d5",
   "approved_by": "garikipatisai-code",
-  "approved_at": "2026-10-26T04:47:01Z",
+  "approved_at": "2026-10-26T04:56:05Z",
   "files": [
     "src/games/egara/chapters/**",
     "src/games/egara/scenes/**",
@@ -22,6 +22,7 @@
     "public/assets/egara/**",
     "public/assets/manifest.json",
     "tests/unit/story-*.spec.ts",
+    "tests/unit/save.spec.ts",
     "tests/unit/chapters.spec.ts",
     "tests/smoke/story.spec.ts",
     "scripts/check-assets.mjs",
@@ -34,5 +35,5 @@
     "docs/plans/2026-10-26-story-mode-progress.md",
     "docs/debt-ledger.md"
   ],
-  "created_at": "2026-10-26T04:47:05.474Z"
+  "created_at": "2026-10-26T04:56:10.888Z"
 }

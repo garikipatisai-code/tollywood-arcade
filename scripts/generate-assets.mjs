@@ -269,8 +269,7 @@ function encodeWav(samples) {
 const SOUNDS = {
   sting: [
     { from: 900, to: 1500, duration: 0.07, gain: 0.22, type: 'square', decay: 3 }
-  ],
-  hit: [
+  ],  hit: [
     { from: 300, to: 80, duration: 0.12, gain: 0.4, noise: true, decay: 4, seed: 11 }
   ],
   boss: [
@@ -286,6 +285,10 @@ const SOUNDS = {
     { from: 392, to: 392, duration: 0.14, gain: 0.25, type: 'square', start: 0 },
     { from: 330, to: 330, duration: 0.14, gain: 0.25, type: 'square', start: 0.14 },
     { from: 262, to: 200, duration: 0.34, gain: 0.25, type: 'square', start: 0.28 }
+  ],
+  buzz: [
+    { from: 85, to: 85, duration: 1.0, gain: 0.4, type: 'sine', decay: 0, start: 0 },
+    { from: 170, to: 170, duration: 1.0, gain: 0.15, type: 'sine', decay: 0, start: 0 }
   ]
 };
 

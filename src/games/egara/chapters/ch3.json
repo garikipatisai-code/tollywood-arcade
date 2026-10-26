@@ -1,0 +1,12 @@
+{
+  "id": "ch3",
+  "nameKey": "story.ch3.name",
+  "goalKey": "story.ch3.goal",
+  "paranoia": 20,
+  "loadout": { "needle": true, "armor": false, "cannon": false },
+  "timeSeconds": 75,
+  "minFrames": 0,
+  "requiredShards": [],
+  "waves": [{ "atSeconds": 2, "kind": "swatter", "count": 2, "pattern": "top" }],
+  "shards": [{ "id": "workshop-1", "x": 480, "y": 200 }]
+}

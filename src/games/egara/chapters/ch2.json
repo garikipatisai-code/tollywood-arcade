@@ -1,0 +1,17 @@
+{
+  "id": "ch2",
+  "nameKey": "story.ch2.name",
+  "goalKey": "story.ch2.goal",
+  "paranoia": 10,
+  "loadout": { "needle": false, "armor": false, "cannon": false },
+  "timeSeconds": 75,
+  "minFrames": 900,
+  "requiredShards": ["memory-1", "memory-2", "memory-3", "memory-4"],
+  "waves": [],
+  "shards": [
+    { "id": "memory-1", "x": 150, "y": 150 },
+    { "id": "memory-2", "x": 480, "y": 300 },
+    { "id": "memory-3", "x": 810, "y": 150 },
+    { "id": "memory-4", "x": 480, "y": 450 }
+  ]
+}

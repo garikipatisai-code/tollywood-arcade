@@ -1,0 +1,19 @@
+{
+  "id": "ch8",
+  "nameKey": "story.ch8.name",
+  "goalKey": "story.ch8.goal",
+  "paranoia": 100,
+  "loadout": { "needle": true, "armor": true, "cannon": true },
+  "timeSeconds": 150,
+  "minFrames": 0,
+  "tint": 16768250,
+  "requiredShards": ["powder", "cannon"],
+  "waves": [
+    { "atSeconds": 3, "kind": "boss", "count": 1, "pattern": "top", "hp": 8 },
+    { "atSeconds": 50, "kind": "spray", "count": 2, "pattern": "sides" }
+  ],
+  "shards": [
+    { "id": "powder", "x": 240, "y": 400 },
+    { "id": "cannon", "x": 480, "y": 120 }
+  ]
+}

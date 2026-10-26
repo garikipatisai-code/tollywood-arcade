@@ -1,6 +1,18 @@
 export const STEP = 1 / 60;
 export const MAX_STEPS = 5;
 export const MAX_FRAME_DELTA = 0.25;
+export const BASE_SHARD_SLOTS = 2;
+export const MAGNET_RADIUS = 70;
+
+/** How many shard pickups per run grant score. Extra shards still count. */
+export function setShardSlots(world: World, slots: number): void {
+  world.shardSlots = Math.max(0, Math.floor(slots));
+}
+export const MAGNET_SPEED = 130;
+export const GRAZE_EXTRA = 12;
+export const SLOWMO_FRAMES = 24;
+export const SLOWMO_SCALE = 0.35;
+export const KNOCKBACK = 0.02;
 
 export type EnemyKind = 'swatter' | 'spray' | 'spider' | 'boss';
 export type Outcome = 'running' | 'won' | 'lost';
@@ -24,6 +36,8 @@ export interface Tuning {
   runSeconds: number;
   player: { speed: number; radius: number; lives: number; invulnFrames: number };
   bullet: { speed: number; radius: number; lifeFrames: number; cooldownFrames: number; damage: number };
+  /** Score per slotted shard; defaults to 250 when omitted (v1 tunings). */
+  shardScore?: number;
   enemies: Record<EnemyKind, EnemyTuning>;
   pools: { enemies: number; bullets: number };
 }
@@ -48,6 +62,7 @@ export interface Bullet {
   vy: number;
   life: number;
   radius: number;
+  pierce: boolean;
 }
 
 export interface Player {
@@ -56,6 +71,43 @@ export interface Player {
   alive: boolean;
   invulnFrames: number;
   cooldownFrames: number;
+}
+
+export interface Loadout {
+  needle: boolean;
+  armor: boolean;
+  cannon: boolean;
+}
+
+export const FULL_LOADOUT: Loadout = { needle: true, armor: true, cannon: true };
+
+/** v1 behavior exactly: sting only, no armor, no piercing. */
+export const DEFAULT_LOADOUT: Loadout = { needle: true, armor: false, cannon: false };
+
+export type SimEventType = 'shard' | 'objective';
+
+export interface SimEvent {
+  tick: number;
+  type: SimEventType;
+  id: string;
+}
+
+export interface Shard {
+  id: string;
+  x: number;
+  y: number;
+  r: number;
+  taken: boolean;
+}
+
+export interface Hazard {
+  id: string;
+  x: number;
+  y: number;
+  r: number;
+  /** Blink cycle in frames; period 0 means always on. */
+  period: number;
+  on: number;
 }
 
 export interface World {
@@ -67,6 +119,16 @@ export interface World {
   runFramesMax: number;
   score: number;
   lives: number;
+  paranoia: number;
+  loadout: Loadout;
+  armorSpent: boolean;
+  slowmoFrames: number;
+  shards: Shard[];
+  hazards: Hazard[];
+  /** Scored shard slots (base 2, +1 with the wing amulet). */
+  shardSlots: number;
+  shardsUsed: number;
+  events: SimEvent[];
   player: Player;
   enemies: Enemy[];
   bullets: Bullet[];
@@ -90,10 +152,10 @@ function emptyEnemy(): Enemy {
 }
 
 function emptyBullet(): Bullet {
-  return { alive: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, radius: 0 };
+  return { alive: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, radius: 0, pierce: false };
 }
 
-export function createWorld(seed: number, tuning: Tuning): World {
+export function createWorld(seed: number, tuning: Tuning, loadout: Loadout = DEFAULT_LOADOUT): World {
   return {
     tuning,
     seed,
@@ -103,6 +165,15 @@ export function createWorld(seed: number, tuning: Tuning): World {
     runFramesMax: Math.round(tuning.runSeconds * 60),
     score: 0,
     lives: tuning.player.lives,
+    paranoia: 0,
+    loadout: { ...loadout },
+    armorSpent: false,
+    slowmoFrames: 0,
+    shards: [],
+    hazards: [],
+    shardSlots: 0,
+    shardsUsed: 0,
+    events: [],
     outcome: 'running',
     player: {
       x: tuning.width / 2,
@@ -116,6 +187,35 @@ export function createWorld(seed: number, tuning: Tuning): World {
   };
 }
 
+/** Paranoia 0-100: the story escalation dial. Clamped, deterministic. */
+export function setParanoia(world: World, value: number): void {
+  world.paranoia = Math.max(0, Math.min(100, Math.round(value)));
+}
+
+export function placeShards(
+  world: World,
+  shards: { id: string; x: number; y: number; r?: number }[]
+): void {
+  world.shards = shards.map((shard) => ({ ...shard, r: shard.r ?? 10, taken: false }));
+}
+
+/** Ritual rings, exterminator fields, and other static dangers. */
+export function placeHazards(
+  world: World,
+  hazards: { id: string; x: number; y: number; r: number; period?: number; on?: number }[]
+): void {
+  world.hazards = hazards.map((hazard) => ({
+    ...hazard,
+    period: hazard.period ?? 0,
+    on: hazard.on ?? 0
+  }));
+}
+
+/** Deterministic blink: derived from the tick, so replays agree. */
+export function hazardActive(hazard: Pick<Hazard, 'period' | 'on'>, tick: number): boolean {
+  if (hazard.period <= 0) return true;
+  return tick % hazard.period < hazard.on;
+}
 /** Deterministic PRNG. State lives in the world so a replay can reproduce it. */
 export function nextRandom(world: World): number {
   world.rng = (world.rng + 0x6d2b79f5) >>> 0;
@@ -131,7 +231,8 @@ export function spawnEnemy(
   x: number,
   y: number,
   vx = 0,
-  vy = 0
+  vy = 0,
+  hp?: number
 ): Enemy | null {
   const slot = world.enemies.find((enemy) => !enemy.alive);
   if (!slot) return null;
@@ -143,7 +244,7 @@ export function spawnEnemy(
   slot.y = y;
   slot.vx = vx;
   slot.vy = vy;
-  slot.hp = stats.hp;
+  slot.hp = hp ?? stats.hp;
   slot.radius = stats.radius;
   slot.score = stats.score;
   return slot;
@@ -160,6 +261,7 @@ function spawnBullet(world: World, x: number, y: number, vx: number, vy: number)
   slot.vy = vy;
   slot.life = world.tuning.bullet.lifeFrames;
   slot.radius = world.tuning.bullet.radius;
+  slot.pierce = world.loadout.cannon;
   return slot;
 }
 
@@ -195,7 +297,7 @@ function fixToArray(world: World, input: SimInput): void {
   if (player.invulnFrames > 0) player.invulnFrames--;
   if (player.cooldownFrames > 0) player.cooldownFrames--;
 
-  if (!input.sting || player.cooldownFrames > 0) return;
+  if (!input.sting || !world.loadout.needle || player.cooldownFrames > 0) return;
 
   const target = nearestEnemy(world);
   let dx = 0;
@@ -263,8 +365,10 @@ function collide(world: World): void {
       const reach = bullet.radius + enemy.radius;
       if (dx * dx + dy * dy > reach * reach) continue;
 
-      bullet.alive = false;
+      if (!bullet.pierce) bullet.alive = false;
       enemy.hp -= tuning.bullet.damage;
+      enemy.vx += bullet.vx * KNOCKBACK;
+      enemy.vy += bullet.vy * KNOCKBACK;
 
       if (enemy.hp <= 0) {
         enemy.alive = false;
@@ -281,19 +385,75 @@ function collide(world: World): void {
 
     const dx = player.x - enemy.x;
     const dy = player.y - enemy.y;
+    const distance = Math.hypot(dx, dy);
     const reach = tuning.player.radius + enemy.radius;
-    if (dx * dx + dy * dy > reach * reach) continue;
+    if (distance > reach) {
+      if (distance <= reach + GRAZE_EXTRA && world.slowmoFrames <= 0) {
+        world.slowmoFrames = SLOWMO_FRAMES;
+      }
+      continue;
+    }
 
     enemy.alive = false;
-    world.lives--;
-    player.invulnFrames = tuning.player.invulnFrames;
+    hurtPlayer(world);
+    if (!player.alive || player.invulnFrames > 0) return;
+    break;
+  }
 
+  if (!player.alive || player.invulnFrames > 0) return;
+
+  for (const hazard of world.hazards) {
+    if (!hazardActive(hazard, world.tick)) continue;
+    const dx = player.x - hazard.x;
+    const dy = player.y - hazard.y;
+    if (dx * dx + dy * dy > (tuning.player.radius + hazard.r) ** 2) continue;
+    hurtPlayer(world);
+    break;
+  }
+
+  if (player.alive) {
+    for (const shard of world.shards) {
+      if (shard.taken) continue;
+      const dx = player.x - shard.x;
+      const dy = player.y - shard.y;
+      const reach = tuning.player.radius + shard.r;
+      if (dx * dx + dy * dy > reach * reach) continue;
+      shard.taken = true;
+      if (world.shardsUsed < world.shardSlots) {
+        world.shardsUsed++;
+        world.score += world.tuning.shardScore ?? 250;
+      }
+      world.events.push({ tick: world.tick, type: 'shard', id: shard.id });
+    }
+  }
+}
+
+function hurtPlayer(world: World): void {
+  const { player, tuning } = world;
+
+  if (world.loadout.armor && !world.armorSpent) {
+    world.armorSpent = true;
+  } else {
+    world.lives--;
     if (world.lives <= 0) {
       world.lives = 0;
       player.alive = false;
       world.outcome = 'lost';
     }
-    break;
+  }
+  player.invulnFrames = tuning.player.invulnFrames;
+}
+
+function stepShards(world: World): void {
+  for (const shard of world.shards) {
+    if (shard.taken) continue;
+    const dx = world.player.x - shard.x;
+    const dy = world.player.y - shard.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance === 0 || distance > MAGNET_RADIUS) continue;
+    const pull = Math.min(distance, MAGNET_SPEED * STEP);
+    shard.x += (dx / distance) * pull;
+    shard.y += (dy / distance) * pull;
   }
 }
 
@@ -301,9 +461,11 @@ export function stepWorld(world: World, input: SimInput): void {
   if (world.outcome !== 'running') return;
 
   world.tick++;
+  if (world.slowmoFrames > 0) world.slowmoFrames--;
   fixToArray(world, input);
   stepBullets(world);
   stepEnemies(world);
+  stepShards(world);
   collide(world);
 
   world.runFrames++;
@@ -356,7 +518,17 @@ export function hashWorld(world: World): string {
     parts.push(enemy.alive ? 1 : 0, KIND_ORDER.indexOf(enemy.kind), q(enemy.x), q(enemy.y), enemy.hp);
   }
   for (const bullet of world.bullets) {
-    parts.push(bullet.alive ? 1 : 0, q(bullet.x), q(bullet.y), bullet.life);
+    parts.push(
+      bullet.alive ? 1 : 0,
+      bullet.pierce ? 1 : 0,
+      q(bullet.x),
+      q(bullet.y),
+      bullet.life
+    );
+  }
+  parts.push(world.paranoia, world.armorSpent ? 1 : 0, world.slowmoFrames, world.shardSlots, world.shardsUsed, world.events.length);
+  for (const shard of world.shards) {
+    parts.push(shard.taken ? 1 : 0);
   }
 
   let hash = 0x811c9dc5;

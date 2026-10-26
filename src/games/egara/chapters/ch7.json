@@ -1,0 +1,17 @@
+{
+  "id": "ch7",
+  "nameKey": "story.ch7.name",
+  "goalKey": "story.ch7.goal",
+  "paranoia": 90,
+  "loadout": { "needle": true, "armor": true, "cannon": false },
+  "timeSeconds": 105,
+  "minFrames": 0,
+  "tint": 15740426,
+  "requiredShards": ["shilpi"],
+  "waves": [
+    { "atSeconds": 5, "kind": "spray", "count": 2, "pattern": "sides" },
+    { "atSeconds": 25, "kind": "swatter", "count": 3, "pattern": "random" },
+    { "atSeconds": 45, "kind": "spider", "count": 1, "pattern": "top" }
+  ],
+  "shards": [{ "id": "shilpi", "x": 480, "y": 120 }]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "ch4",
+  "nameKey": "story.ch4.name",
+  "goalKey": "story.ch4.goal",
+  "paranoia": 40,
+  "loadout": { "needle": true, "armor": false, "cannon": false },
+  "timeSeconds": 90,
+  "minFrames": 0,
+  "requiredShards": ["feast-1", "feast-2"],
+  "waves": [
+    { "atSeconds": 4, "kind": "spray", "count": 2, "pattern": "sides" },
+    { "atSeconds": 20, "kind": "swatter", "count": 3, "pattern": "random" }
+  ],
+  "shards": [
+    { "id": "feast-1", "x": 240, "y": 180 },
+    { "id": "feast-2", "x": 720, "y": 180 }
+  ]
+}

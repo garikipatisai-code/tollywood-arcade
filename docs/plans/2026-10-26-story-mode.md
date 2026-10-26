@@ -2,7 +2,7 @@
 spec: docs/specs/2026-10-26-egara-story-mode.md
 status: approved
 approved_by: garikipatisai-code
-approved_at: 2026-10-26T04:47:01Z
+approved_at: 2026-10-26T04:56:05Z
 files:
   - src/games/egara/chapters/**
   - src/games/egara/scenes/**
@@ -18,6 +18,7 @@ files:
   - public/assets/egara/**
   - public/assets/manifest.json
   - tests/unit/story-*.spec.ts
+  - tests/unit/save.spec.ts
   - tests/unit/chapters.spec.ts
   - tests/smoke/story.spec.ts
   - scripts/check-assets.mjs

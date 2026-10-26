@@ -8,6 +8,7 @@ export interface HudLabels {
   back: string;
   mute: string;
   unmute: string;
+  story?: string;
   controls: string;
   change: string;
   capturing: string;
@@ -27,14 +28,42 @@ export interface Hud {
   setLives(lives: number): void;
   setTime(seconds: number): void;
   setMuted(muted: boolean): void;
-  showMenu(title: string, body: string, canResume: boolean): void;
+  showMenu(menuTitle: string, menuBody: string, canResume: boolean, nextLabel?: string): void;
   hideMenu(): void;
   renderControls(rows: ControlRow[], onChange: (action: string) => void): void;
   setCapturing(action: string | null): void;
   onPause(handler: () => void): void;
   onResume(handler: () => void): void;
   onRetry(handler: () => void): void;
+  onNext(handler: () => void): void;
+  renderChapterSelect(
+    model: ChapterSelectModel,
+    onPick: (id: string) => void,
+    onNg: () => void
+  ): HTMLElement;
   onMute(handler: () => void): void;
+}
+
+export interface ChapterCard {
+  id: string;
+  name: string;
+  goal: string;
+  locked: boolean;
+  best: number;
+  shardsTaken: number;
+  shardsTotal: number;
+}
+
+export interface ChapterSelectModel {
+  title: string;
+  backLabel: string;
+  lockedLabel: string;
+  bestLabel: string;
+  shardsLabel: string;
+  ngLabel: string;
+  ngActive: boolean;
+  showNgToggle: boolean;
+  cards: ChapterCard[];
 }
 
 function element<K extends keyof HTMLElementTagNameMap>(
@@ -100,11 +129,19 @@ export function createHud(labels: HudLabels): Hud {
   retry.type = 'button';
   retry.textContent = labels.retry;
 
+  const next = element('button', 'ta-button');
+  next.type = 'button';
+  next.hidden = true;
+
   const back = element('a', 'ta-button ta-button--ghost');
   back.href = '../../';
   back.textContent = labels.back;
 
-  actions.append(resume, retry, back);
+  const storyLink = element('a', 'ta-button ta-button--ghost');
+  storyLink.href = './?select=1';
+  storyLink.textContent = labels.story ?? 'Story';
+
+  actions.append(resume, retry, next, storyLink, back);
   menu.append(title, body, controls, actions);
   root.append(stats, hudActions);
 
@@ -130,14 +167,16 @@ export function createHud(labels: HudLabels): Hud {
       muteButton.textContent = muted ? labels.unmute : labels.mute;
       muteButton.setAttribute('aria-pressed', String(muted));
     },
-    showMenu(menuTitle: string, menuBody: string, canResume: boolean) {
+    showMenu(menuTitle: string, menuBody: string, canResume: boolean, nextLabel?: string) {
       title.textContent = menuTitle;
       body.textContent = menuBody;
       body.hidden = menuBody.length === 0;
       resume.hidden = !canResume;
       controls.hidden = !canResume;
+      next.hidden = !nextLabel;
+      if (nextLabel) next.textContent = nextLabel;
       menu.hidden = false;
-      (canResume ? resume : retry).focus();
+      (nextLabel ? next : canResume ? resume : retry).focus();
     },
     hideMenu() {
       menu.hidden = true;
@@ -179,6 +218,53 @@ export function createHud(labels: HudLabels): Hud {
     },
     onRetry(handler: () => void) {
       retry.onclick = handler;
+    },
+    onNext(handler: () => void) {
+      next.onclick = handler;
+    },
+    renderChapterSelect(model: ChapterSelectModel, onPick: (id: string) => void, onNg: () => void) {
+      const section = element('div', 'ta-menu');
+      section.setAttribute('role', 'dialog');
+      section.setAttribute('aria-label', model.title);
+
+      const heading = element('h2', 'ta-menu__title');
+      heading.textContent = model.title;
+
+      const list = element('ul', 'ta-controls__list');
+      for (const card of model.cards) {
+        const item = element('li', 'ta-controls__row');
+        const pick = element('button', 'ta-button');
+        pick.type = 'button';
+        pick.disabled = card.locked;
+        pick.dataset.chapter = card.id;
+        pick.textContent = card.locked
+          ? `${card.name} · ${model.lockedLabel}`
+          : `${card.name} — ${model.bestLabel}: ${card.best} · ${model.shardsLabel}: ${card.shardsTaken}/${card.shardsTotal}`;
+        pick.title = card.goal;
+        pick.addEventListener('click', () => onPick(card.id));
+        item.append(pick);
+        list.append(item);
+      }
+
+      const footer = element('div', 'ta-menu__actions');
+      const backLink = element('a', 'ta-button ta-button--ghost');
+      backLink.href = '../../';
+      backLink.textContent = model.backLabel;
+      footer.append(backLink);
+
+      if (model.showNgToggle) {
+        const ng = element('button', 'ta-button');
+        ng.type = 'button';
+        ng.textContent = model.ngActive ? `${model.ngLabel} ✓` : model.ngLabel;
+        ng.setAttribute('aria-pressed', String(model.ngActive));
+        ng.addEventListener('click', onNg);
+        footer.append(ng);
+      }
+
+      section.append(heading, list, footer);
+      const container = document.getElementById('game-container') ?? document.body;
+      container.append(section);
+      return section;
     },
     onMute(handler: () => void) {
       muteButton.onclick = handler;

@@ -1,11 +1,21 @@
+import type { Loadout } from '../engines/shooter/sim';
 import type { Lang } from './i18n';
 
+export interface ChapterProgress {
+  unlocked: boolean;
+  best: number;
+}
+
 export interface SaveData {
-  v: 1;
+  v: 2;
   lang: Lang;
   muted: boolean;
   best: Record<string, number>;
   remaps: Record<string, string[]>;
+  chapters: Record<string, ChapterProgress>;
+  shards: string[];
+  unlocks: Loadout;
+  amulet: boolean;
 }
 
 export type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
@@ -13,7 +23,17 @@ export type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
 export const SAVE_KEY = 'tollywood-arcade.save';
 
 export function defaultSave(): SaveData {
-  return { v: 1, lang: 'en', muted: false, best: {}, remaps: {} };
+  return {
+    v: 2,
+    lang: 'en',
+    muted: false,
+    best: {},
+    remaps: {},
+    chapters: {},
+    shards: [],
+    unlocks: { needle: true, armor: false, cannon: false },
+    amulet: false
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -49,6 +69,37 @@ function toRemaps(value: unknown): Record<string, string[]> {
   return remaps;
 }
 
+function toLoadout(value: unknown): Loadout {
+  const fallback = defaultSave().unlocks;
+  if (!isRecord(value)) return { ...fallback };
+  return {
+    needle: value.needle === true,
+    armor: value.armor === true,
+    cannon: value.cannon === true
+  };
+}
+
+function toChapters(value: unknown): Record<string, ChapterProgress> {
+  if (!isRecord(value)) return {};
+  const chapters: Record<string, ChapterProgress> = {};
+  for (const [id, progress] of Object.entries(value)) {
+    if (!isRecord(progress)) continue;
+    chapters[id] = {
+      unlocked: progress.unlocked === true,
+      best:
+        typeof progress.best === 'number' && Number.isFinite(progress.best) && progress.best >= 0
+          ? Math.floor(progress.best)
+          : 0
+    };
+  }
+  return chapters;
+}
+
+function toShards(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter((id): id is string => typeof id === 'string'))];
+}
+
 function fromLegacy(raw: Record<string, unknown>): SaveData {
   const save = defaultSave();
   save.lang = toLang(raw.language ?? raw.lang);
@@ -57,6 +108,28 @@ function fromLegacy(raw: Record<string, unknown>): SaveData {
   if (typeof raw.highScore === 'number' && Number.isFinite(raw.highScore) && raw.highScore >= 0) {
     save.best.egara = Math.floor(raw.highScore);
   }
+  return save;
+}
+
+function fromV1(raw: Record<string, unknown>): SaveData {
+  const save = defaultSave();
+  save.lang = toLang(raw.lang);
+  save.muted = raw.muted === true;
+  save.best = toScoreMap(raw.best);
+  save.remaps = toRemaps(raw.remaps);
+  return save;
+}
+
+function fromV2(raw: Record<string, unknown>): SaveData {
+  const save = defaultSave();
+  save.lang = toLang(raw.lang);
+  save.muted = raw.muted === true;
+  save.best = toScoreMap(raw.best);
+  save.remaps = toRemaps(raw.remaps);
+  save.chapters = toChapters(raw.chapters);
+  save.shards = toShards(raw.shards);
+  save.unlocks = toLoadout(raw.unlocks);
+  save.amulet = raw.amulet === true;
   return save;
 }
 
@@ -73,18 +146,9 @@ export function parseSave(raw: string | null): SaveData {
 
   if (!isRecord(parsed)) return defaultSave();
 
-  if (parsed.v === 1) {
-    const save = defaultSave();
-    save.lang = toLang(parsed.lang);
-    save.muted = parsed.muted === true;
-    save.best = toScoreMap(parsed.best);
-    save.remaps = toRemaps(parsed.remaps);
-    return save;
-  }
-
-  if ('language' in parsed || 'highScore' in parsed) {
-    return fromLegacy(parsed);
-  }
+  if (parsed.v === 2) return fromV2(parsed);
+  if (parsed.v === 1) return fromV1(parsed);
+  if ('language' in parsed || 'highScore' in parsed) return fromLegacy(parsed);
 
   return defaultSave();
 }
@@ -127,4 +191,26 @@ export function withBest(save: SaveData, game: string, score: number): SaveData 
 
 export function withRemap(save: SaveData, action: string, keys: string[]): SaveData {
   return { ...save, remaps: { ...save.remaps, [action]: [...keys] } };
+}
+
+export function withUnlock(save: SaveData, key: keyof Loadout, value: boolean): SaveData {
+  return { ...save, unlocks: { ...save.unlocks, [key]: value } };
+}
+
+export function withShard(save: SaveData, id: string): SaveData {
+  if (save.shards.includes(id)) return save;
+  return { ...save, shards: [...save.shards, id] };
+}
+
+export function withChapter(save: SaveData, id: string, score: number): SaveData {
+  const current = save.chapters[id];
+  const best = Math.max(
+    current?.best ?? 0,
+    Number.isFinite(score) && score > 0 ? Math.floor(score) : 0
+  );
+  return { ...save, chapters: { ...save.chapters, [id]: { unlocked: true, best } } };
+}
+
+export function withAmulet(save: SaveData, value: boolean): SaveData {
+  return { ...save, amulet: value };
 }

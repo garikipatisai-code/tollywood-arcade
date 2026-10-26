@@ -4,6 +4,7 @@
   "runSeconds": 90,
   "player": { "speed": 290, "radius": 12, "lives": 3, "invulnFrames": 90 },
   "bullet": { "speed": 760, "radius": 5, "lifeFrames": 45, "cooldownFrames": 8, "damage": 1 },
+  "shardScore": 250,
   "enemies": {
     "swatter": { "hp": 1, "radius": 26, "speed": 95, "score": 100 },
     "spray": { "hp": 1, "radius": 20, "speed": 150, "score": 150 },

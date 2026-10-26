@@ -1,0 +1,19 @@
+{
+  "id": "ch5",
+  "nameKey": "story.ch5.name",
+  "goalKey": "story.ch5.goal",
+  "paranoia": 65,
+  "loadout": { "needle": true, "armor": true, "cannon": false },
+  "timeSeconds": 105,
+  "minFrames": 0,
+  "requiredShards": ["nest-1", "nest-2"],
+  "waves": [
+    { "atSeconds": 3, "kind": "spider", "count": 1, "pattern": "top" },
+    { "atSeconds": 15, "kind": "spray", "count": 3, "pattern": "sides" },
+    { "atSeconds": 30, "kind": "swatter", "count": 3, "pattern": "random" }
+  ],
+  "shards": [
+    { "id": "nest-1", "x": 300, "y": 420 },
+    { "id": "nest-2", "x": 660, "y": 420 }
+  ]
+}

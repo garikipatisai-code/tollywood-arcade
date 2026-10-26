@@ -12,6 +12,8 @@ export interface WaveEvent {
   kind: EnemyKind;
   count: number;
   pattern: SpawnPattern;
+  /** Optional per-wave hp override (finale bosses, wounded foes). */
+  hp?: number;
 }
 
 export interface Director {
@@ -72,15 +74,20 @@ function spawnSpot(world: World, pattern: SpawnPattern, index: number, kind: Ene
 
 /** Called every simulation step; fires any wave whose time has arrived. */
 export function stepDirector(world: World, director: Director): void {
+  // Paranoia adds reinforcements: +1 per wave at 50+, +2 at 100.
+  const bonus = world.paranoia >= 100 ? 2 : world.paranoia >= 50 ? 1 : 0;
+
   while (director.nextIndex < director.events.length) {
     const event = director.events[director.nextIndex];
     if (world.runFrames < Math.round(event.atSeconds * 60)) break;
 
+    const waveIndex = director.nextIndex;
     director.nextIndex++;
+    world.events.push({ tick: world.tick, type: 'objective', id: `wave-${waveIndex}` });
 
-    for (let i = 0; i < event.count; i++) {
+    for (let i = 0; i < event.count + bonus; i++) {
       const spot = spawnSpot(world, event.pattern, i, event.kind);
-      const enemy = spawnEnemy(world, event.kind, spot.x, spot.y, spot.vx, spot.vy);
+      const enemy = spawnEnemy(world, event.kind, spot.x, spot.y, spot.vx, spot.vy, event.hp);
       if (enemy) director.spawned++;
       else director.dropped++;
     }

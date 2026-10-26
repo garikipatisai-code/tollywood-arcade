@@ -11,27 +11,54 @@ import {
   type Axis
 } from '../../../core/input';
 import { translate, type MessageKey } from '../../../core/i18n';
-import { loadSave, persistSave, withBest, withMuted, withRemap } from '../../../core/save';
+import { HitStop, ScreenShake, buzzMix } from '../../../core/feel';
+import {
+  loadSave,
+  persistSave,
+  withAmulet,
+  withBest,
+  withChapter,
+  withMuted,
+  withRemap,
+  withShard,
+  withUnlock,
+  type SaveData
+} from '../../../core/save';
 import { createDirector, stepDirector, type Director } from '../../../engines/shooter/director';
 import {
+  BASE_SHARD_SLOTS,
   MAX_STEPS,
+  SLOWMO_SCALE,
   STEP,
   createWorld,
+  hazardActive,
+  placeHazards,
+  placeShards,
+  setParanoia,
+  setShardSlots,
   stepWorld,
   type EnemyKind,
+  type Loadout,
   type SimInput,
   type World
 } from '../../../engines/shooter/sim';
-import { EGARA_TUNING, EGARA_WAVES } from '../content';
+import { CHAPTERS, EGARA_TUNING, EGARA_WAVES, chapterStatus, type Chapter } from '../content';
+
+const CHAPTER_UNLOCKS: Record<string, (keyof Loadout)[]> = {
+  ch3: ['needle'],
+  ch5: ['armor'],
+  ch8: ['cannon']
+};
 
 const COLORS = {
   bg: 0x120f18,
   grid: 0x241b33,
-  bullet: 0xffe9a8
+  bullet: 0xffe9a8,
+  ring: 0xd05a5a
 };
 
 const FRAME: Record<EnemyKind, number> = { swatter: 1, spray: 2, spider: 3, boss: 4 };
-const SOUND_KEYS = ['sting', 'hit', 'boss', 'win', 'lose'] as const;
+const SOUND_KEYS = ['sting', 'hit', 'boss', 'win', 'lose', 'buzz'] as const;
 
 export class EgaraScene extends Phaser.Scene {
   private world!: World;
@@ -55,6 +82,12 @@ export class EgaraScene extends Phaser.Scene {
   private capturing: Action | null = null;
   private keyDetach?: () => void;
   private detach: (() => void)[] = [];
+  private readonly shake = new ScreenShake();
+  private readonly hitStop = new HitStop();
+  private chapter: Chapter | null = null;
+  private ngplus = false;
+  private chapterDone = false;
+  private buzz: Phaser.Sound.BaseSound | null = null;
 
   constructor(private readonly hud: Hud) {
     super('Egara');
@@ -69,12 +102,25 @@ export class EgaraScene extends Phaser.Scene {
   create(): void {
     this.save = loadSave();
     this.inputMap = new InputMap(bindingsFrom(this.save.remaps));
-    this.world = createWorld(randomSeed(), EGARA_TUNING);
-    this.director = createDirector(EGARA_WAVES);
+    this.chapter = this.resolveChapter();
+    this.ngplus = this.save.amulet && new URLSearchParams(window.location.search).get('ng') === '1';
+
+    if (this.chapter) {
+      this.world = createWorld(randomSeed(), EGARA_TUNING, this.chapter.loadout);
+      setParanoia(this.world, this.chapter.paranoia);
+      placeShards(this.world, this.chapter.shards);
+      placeHazards(this.world, this.chapter.hazards ?? []);
+      setShardSlots(this.world, BASE_SHARD_SLOTS + (this.ngplus ? 1 : 0));
+      this.director = createDirector(this.chapter.waves);
+    } else {
+      this.world = createWorld(randomSeed(), EGARA_TUNING);
+      this.director = createDirector(EGARA_WAVES);
+    }
     this.acc = 0;
     this.paused = false;
     this.ended = false;
     this.bossSeen = false;
+    this.chapterDone = false;
     this.frames = 0;
 
     this.prevPlayer = { x: this.world.player.x, y: this.world.player.y };
@@ -99,7 +145,18 @@ export class EgaraScene extends Phaser.Scene {
         },
         setMute: (muted) => {
           this.sound.mute = muted;
-        }
+        },
+        startLoop: (key, rate, volume) => {
+          this.stopBuzz();
+          if (!this.cache.audio.exists(key)) return;
+          this.buzz = this.sound.add(key);
+          this.buzz.play({ loop: true, rate, volume });
+        },
+        tuneLoop: (volume) => {
+          const node = this.buzz as unknown as { volumeNode?: { gain: { value: number } } } | null;
+          if (node?.volumeNode) node.volumeNode.gain.value = volume;
+        },
+        stopLoop: () => this.stopBuzz()
       },
       {
         muted: this.save.muted,
@@ -116,6 +173,7 @@ export class EgaraScene extends Phaser.Scene {
     this.hud.onPause(() => this.togglePause());
     this.hud.onResume(() => this.togglePause());
     this.hud.onRetry(() => this.scene.restart());
+    this.hud.onNext(() => this.goNextChapter());
     this.hud.onMute(() => {
       const muted = this.audio.toggleMute();
       this.hud.setMuted(muted);
@@ -128,17 +186,127 @@ export class EgaraScene extends Phaser.Scene {
     this.bindPointer();
     this.bindPauseKey();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
+    this.audio.startLoop('buzz', 1, 0);
+
+    if (this.chapter) {
+      this.world.runFramesMax = this.chapter.timeSeconds * 60;
+      this.paused = true;
+      this.hud.showMenu(
+        translate(this.save.lang, this.chapter.nameKey as MessageKey),
+        translate(this.save.lang, this.chapter.goalKey as MessageKey),
+        true
+      );
+    } else if (new URLSearchParams(window.location.search).get('select') === '1') {
+      this.paused = true;
+      this.hud.pauseButton.hidden = true;
+      this.showSelect();
+    }
+  }
+
+  private resolveChapter(): Chapter | null {
+    const id = new URLSearchParams(window.location.search).get('ch');
+    if (!id) return null;
+    const index = CHAPTERS.findIndex((chapter) => chapter.id === id);
+    if (index < 0) return null;
+    if (index > 0 && !this.save.chapters[CHAPTERS[index - 1].id]?.unlocked) return null;
+    return CHAPTERS[index];
+  }
+
+  private showSelect(): void {
+    const lang = this.save.lang;
+    const params = new URLSearchParams(window.location.search);
+    const ngActive = params.get('ng') === '1' && this.save.amulet;
+
+    this.hud.renderChapterSelect(
+      {
+        title: translate(lang, 'story.select'),
+        backLabel: translate(lang, 'game.back'),
+        lockedLabel: translate(lang, 'hub.locked'),
+        bestLabel: translate(lang, 'game.score'),
+        shardsLabel: translate(lang, 'story.shards'),
+        ngLabel: translate(lang, 'story.ngplus'),
+        ngActive,
+        showNgToggle: this.save.amulet,
+        cards: CHAPTERS.map((chapter, index) => ({
+          id: chapter.id,
+          name: translate(lang, chapter.nameKey as MessageKey),
+          goal: translate(lang, chapter.goalKey as MessageKey),
+          locked: index > 0 && !this.save.chapters[CHAPTERS[index - 1].id]?.unlocked,
+          best: this.save.chapters[chapter.id]?.best ?? 0,
+          shardsTaken: chapter.shards.filter((shard) => this.save.shards.includes(shard.id)).length,
+          shardsTotal: chapter.shards.length
+        }))
+      },
+      (id) => {
+        window.location.search = `?ch=${id}${ngActive ? '&ng=1' : ''}`;
+      },
+      () => {
+        window.location.search = ngActive ? '?select=1' : '?select=1&ng=1';
+      }
+    );
+  }
+
+  private goNextChapter(): void {
+    if (!this.chapter) return;
+    const index = CHAPTERS.findIndex((chapter) => chapter.id === this.chapter!.id);
+    const next = CHAPTERS[index + 1];
+    const ng = this.ngplus ? '&ng=1' : '';
+    window.location.search = next ? `?ch=${next.id}${ng}` : '?select=1';
+  }
+
+  private onChapterComplete(): void {
+    const chapter = this.chapter;
+    if (!chapter || this.chapterDone) return;
+    this.chapterDone = true;
+    this.ended = true;
+    this.hud.pauseButton.hidden = true;
+
+    let save: SaveData = withChapter(this.save, chapter.id, this.world.score);
+    for (const shard of this.world.shards) {
+      if (shard.taken) save = withShard(save, shard.id);
+    }
+    for (const key of CHAPTER_UNLOCKS[chapter.id] ?? []) {
+      save = withUnlock(save, key, true);
+    }
+    const index = CHAPTERS.findIndex((c) => c.id === chapter.id);
+    const next = CHAPTERS[index + 1];
+    if (next) save = withChapter(save, next.id, 0);
+
+    let bonus = '';
+    if (chapter.id === 'ch8') {
+      save = withAmulet(save, true);
+      bonus = ` · ${translate(save.lang, 'story.amulet.name')}`;
+    }
+    this.save = save;
+    persistSave(save);
+    this.audio.play('win');
+
+    const best = save.chapters[chapter.id]?.best ?? this.world.score;
+    this.hud.showMenu(
+      translate(save.lang, 'story.complete'),
+      `${translate(save.lang, 'game.score')}: ${this.world.score} · ${translate(save.lang, 'game.best', { score: best })}${bonus}`,
+      false,
+      next ? translate(save.lang, 'story.next') : undefined
+    );
   }
 
   update(_time: number, delta: number): void {
     this.frames++;
+    const dt = Math.min(delta / 1000, 0.25);
+    this.shake.update(dt);
 
     if (!this.paused && !this.ended) {
-      this.simulate(Math.min(delta / 1000, 0.25), this.readInput());
+      this.simulate(dt, this.readInput());
     }
 
     this.render(this.acc / STEP);
     this.refreshHud();
+
+    if (this.chapter && !this.ended && !this.chapterDone && this.frames % 30 === 0) {
+      if (chapterStatus(this.world, this.director, this.chapter) === 'complete') {
+        this.onChapterComplete();
+      }
+    }
     this.checkEnd();
 
     if (this.paused) this.hud.setTime((this.world.runFramesMax - this.world.runFrames) / 60);
@@ -146,8 +314,13 @@ export class EgaraScene extends Phaser.Scene {
 
   private simulate(dt: number, input: SimInput): void {
     const scoreBefore = this.world.score;
+    const livesBefore = this.world.lives;
     const stingReady = input.sting && this.world.player.cooldownFrames === 0;
-    let acc = Math.min(this.acc + dt, 0.25);
+
+    if (this.hitStop.consume()) return;
+
+    const scaled = this.world.slowmoFrames > 0 ? dt * SLOWMO_SCALE : dt;
+    let acc = Math.min(this.acc + scaled, 0.25);
     let steps = 0;
 
     while (acc >= STEP && steps < MAX_STEPS && this.world.outcome === 'running') {
@@ -161,7 +334,15 @@ export class EgaraScene extends Phaser.Scene {
     this.acc = acc;
 
     if (stingReady && steps > 0) this.audio.play('sting');
-    if (this.world.score > scoreBefore) this.audio.play('hit');
+    if (this.world.score > scoreBefore) {
+      this.audio.play('hit');
+      this.shake.add(0.35);
+      this.hitStop.trigger(3);
+    }
+    if (this.world.lives < livesBefore) {
+      this.shake.add(0.6);
+      this.hitStop.trigger(6);
+    }
 
     if (!this.bossSeen && this.world.enemies.some((enemy) => enemy.alive && enemy.kind === 'boss')) {
       this.bossSeen = true;
@@ -300,10 +481,26 @@ export class EgaraScene extends Phaser.Scene {
     this.hud.setScore(this.world.score);
     this.hud.setLives(this.world.lives);
     this.hud.setTime((this.world.runFramesMax - this.world.runFrames) / 60);
+
+    const alive = this.world.enemies.filter((enemy) => enemy.alive).length;
+    const mix = buzzMix(this.world.paranoia, Math.min(1, alive / 8));
+    this.audio.tuneLoop(mix.gain * 0.5);
   }
 
   private checkEnd(): void {
     if (this.ended || this.world.outcome === 'running') return;
+
+    if (this.chapter && !this.chapterDone) {
+      this.ended = true;
+      this.hud.pauseButton.hidden = true;
+      this.audio.play('lose');
+      this.hud.showMenu(
+        translate(this.save.lang, 'game.lose'),
+        translate(this.save.lang, this.chapter.goalKey as MessageKey),
+        false
+      );
+      return;
+    }
 
     this.ended = true;
     this.hud.pauseButton.hidden = true;
@@ -325,6 +522,7 @@ export class EgaraScene extends Phaser.Scene {
     const g = this.graphics;
     const { width, height } = EGARA_TUNING;
     const blend = Phaser.Math.Clamp(alpha, 0, 1);
+    const { x: ox, y: oy } = this.shake.offset();
 
     g.clear();
     g.fillStyle(COLORS.bg, 1);
@@ -338,8 +536,25 @@ export class EgaraScene extends Phaser.Scene {
       if (!bullet.alive) return;
       const prev = this.prevBullets[index];
       g.fillStyle(COLORS.bullet, 1);
-      g.fillCircle(lerp(prev.x, bullet.x, blend), lerp(prev.y, bullet.y, blend), bullet.radius);
+      g.fillCircle(lerp(prev.x, bullet.x, blend) + ox, lerp(prev.y, bullet.y, blend) + oy, bullet.radius);
     });
+
+    this.world.shards.forEach((shard, index) => {
+      if (shard.taken) return;
+      const bob = Math.sin((this.frames + index * 17) / 20) * 3;
+      g.fillStyle(0xe8b04b, 1);
+      g.fillCircle(shard.x + ox, shard.y + bob + oy, 7);
+      g.fillStyle(0xfff6d8, 1);
+      g.fillCircle(shard.x + ox, shard.y + bob + oy, 3);
+    });
+
+    for (const hazard of this.world.hazards) {
+      if (!hazardActive(hazard, this.world.tick)) continue;
+      g.lineStyle(3, COLORS.ring, 0.9);
+      g.strokeCircle(hazard.x + ox, hazard.y + oy, hazard.r);
+      g.lineStyle(1, COLORS.ring, 0.35);
+      g.strokeCircle(hazard.x + ox, hazard.y + oy, hazard.r * 0.7);
+    }
 
     this.world.enemies.forEach((enemy, index) => {
       const sprite = this.enemySprites[index];
@@ -352,7 +567,8 @@ export class EgaraScene extends Phaser.Scene {
       sprite
         .setVisible(true)
         .setFrame(FRAME[enemy.kind])
-        .setPosition(lerp(prev.x, enemy.x, blend), lerp(prev.y, enemy.y, blend))
+        .setTint(this.chapter?.tint ?? 0xffffff)
+        .setPosition(lerp(prev.x, enemy.x, blend) + ox, lerp(prev.y, enemy.y, blend) + oy)
         .setDisplaySize(enemy.radius * 2, enemy.radius * 2);
     });
 
@@ -363,14 +579,20 @@ export class EgaraScene extends Phaser.Scene {
 
     this.playerSprite
       .setVisible(player.alive && !blink)
-      .setPosition(px, py)
+      .setPosition(px + ox, py + oy)
       .setDisplaySize(EGARA_TUNING.player.radius * 2.4, EGARA_TUNING.player.radius * 2.4);
   }
 
   private teardown(): void {
     this.stopCapture();
+    this.audio.stopLoop();
     for (const off of this.detach) off();
     this.detach = [];
+  }
+
+  private stopBuzz(): void {
+    this.buzz?.stop();
+    this.buzz = null;
   }
 }
 

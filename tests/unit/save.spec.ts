@@ -29,13 +29,15 @@ describe('save', () => {
     expect(save.best).toEqual({});
   });
 
-  it('migrates the legacy v0 shape', () => {
+  it('migrates the legacy v0 shape to v2', () => {
     const legacy = JSON.stringify({ language: 'te', muted: true, highScore: 900 });
     const save = parseSave(legacy);
-    expect(save.v).toBe(1);
+    expect(save.v).toBe(2);
     expect(save.lang).toBe('te');
     expect(save.muted).toBe(true);
     expect(save.best.egara).toBe(900);
+    expect(save.chapters).toEqual({});
+    expect(save.amulet).toBe(false);
   });
 
   it('survives corrupt JSON', () => {

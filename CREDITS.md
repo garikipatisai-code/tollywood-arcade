@@ -21,7 +21,7 @@ and released under CC0-1.0. Per-file entries live in
 | Asset | What it is |
 |---|---|
 | `egara/sprites.png` | 5 frames at 16×16: fly, swatter, spray, spider, boss |
-| `egara/*.wav` | synthesised sting, hit, boss, win, lose |
+| `egara/*.wav` | synthesised sting, hit, boss, win, lose, and a loopable wing buzz |
 
 ## Fonts
 
