@@ -18,3 +18,7 @@ Gate: active (blanket authorization 2026-10-26T05:16:59Z by garikipatisai-code)
 ## Log
 
 - 2026-10-26T05:17Z — v3 gate active under blanket authorization. Kenney CC0 packs downloaded (24 MB).
+- 2026-10-26T08:15Z — v3 complete. Fresh evidence: 94/94 unit, tsc clean, build OK, assets 2.1 MB licensed, budget hub 2.3 KB/egara 361 KB gz (under even the old caps), smoke 7/8 (1 known pre-existing remap flake), Pages deploy success, live 200 + live smoke passed, gate verified.
+- Visual verification: sprite sheet (8 frames), ch5 lush world, ch8 inferno, comic panel, living hub, ch6 exorcist — all screenshotted and inspected.
+- Review: code-reviewer unavailable (free limit); orchestrator self-review — no secrets/strays/unsafe DOM; sim untouched (determinism suite green throughout).
+- Carried minors: remap smoke flake (pre-existing, out of scope); TE fallback 'Story'/'FX' single words; device perf run still pending (auto-tier is the mitigation).
