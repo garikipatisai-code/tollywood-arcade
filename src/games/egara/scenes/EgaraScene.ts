@@ -670,6 +670,10 @@ export class EgaraScene extends Phaser.Scene {
 
     for (const hazard of this.world.hazards) {
       if (!hazardActive(hazard, this.world.tick)) continue;
+      if (hazard.kind === 'car') {
+        this.drawCar(g, hazard.x + ox, hazard.y + oy, hazard.r, hazard.vx >= 0 ? 1 : -1);
+        continue;
+      }
       g.lineStyle(3, COLORS.ring, 0.9);
       g.strokeCircle(hazard.x + ox, hazard.y + oy, hazard.r);
       g.lineStyle(1, COLORS.ring, 0.35);
@@ -707,8 +711,28 @@ export class EgaraScene extends Phaser.Scene {
       .setDisplaySize(EGARA_TUNING.player.radius * 2.4, EGARA_TUNING.player.radius * 2.4);
   }
 
-  private teardown(): void {
-    this.stopCapture();
+  private drawCar(g: Phaser.GameObjects.Graphics, x: number, y: number, r: number, dir: number): void {
+    const w = r * 2.6;
+    const h = r * 1.15;
+    g.fillStyle(0x141420, 1);
+    g.fillCircle(x - (w / 2 - 10) * dir, y + h / 2 - 4, 8);
+    g.fillCircle(x + (w / 2 - 10) * dir, y + h / 2 - 4, 8);
+    g.fillStyle(0x2a3a5e, 1);
+    g.fillRoundedRect(x - w / 2, y - h / 2, w, h, 8);
+    g.fillStyle(0x3a4e72, 1);
+    g.fillRoundedRect(x - w / 2 + 8, y - h / 2 + 6, w - 16, h / 2 - 4, 5);
+    g.fillStyle(0x9fd8f0, 0.95);
+    const shieldX = x + ((w / 2 - 26) * dir);
+    g.fillRoundedRect(shieldX - 9, y - h / 2 + 8, 18, 10, 3);
+    g.fillStyle(0xfff2b0, 1);
+    g.fillCircle(x + (w / 2) * dir, y - 2, 4);
+    g.fillCircle(x + (w / 2) * dir, y + 8, 4);
+    g.fillStyle(0xd05a5a, 1);
+    g.fillCircle(x - (w / 2) * dir, y - 2, 3.5);
+    g.fillCircle(x - (w / 2) * dir, y + 8, 3.5);
+  }
+
+  private teardown(): void {    this.stopCapture();
     this.audio.stopLoop();
     this.music?.stop();
     this.game.canvas.style.filter = '';

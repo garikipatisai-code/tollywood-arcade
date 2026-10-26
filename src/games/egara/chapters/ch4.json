@@ -7,6 +7,11 @@
   "timeSeconds": 90,
   "minFrames": 0,
   "requiredShards": ["feast-1", "feast-2"],
+  "hazards": [
+    { "id": "car-1", "x": -60, "y": 360, "r": 34, "vx": 130, "kind": "car" },
+    { "id": "car-2", "x": 1020, "y": 430, "r": 34, "vx": -160, "kind": "car" },
+    { "id": "car-3", "x": -60, "y": 490, "r": 34, "vx": 200, "kind": "car" }
+  ],
   "waves": [
     { "atSeconds": 4, "kind": "spray", "count": 2, "pattern": "sides" },
     { "atSeconds": 20, "kind": "swatter", "count": 3, "pattern": "random" }

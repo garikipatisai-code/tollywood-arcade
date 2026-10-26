@@ -81,9 +81,9 @@ function toChapter(rawChapter: unknown): Chapter {
     wind: (((c as Record<string, unknown>).wind ?? []) as Omit<WindZone, 'period' | 'on'>[]).map(
       (zone) => ({ period: 0, on: 0, ...zone })
     ),
-    hazards: (((c as Record<string, unknown>).hazards ?? []) as Omit<Hazard, 'period' | 'on'>[]).map(
-      (hazard) => ({ period: 0, on: 0, ...hazard })
-    )
+    hazards: (
+      ((c as Record<string, unknown>).hazards ?? []) as Omit<Hazard, 'period' | 'on' | 'vx' | 'vy' | 'kind'>[]
+    ).map((hazard) => ({ period: 0, on: 0, vx: 0, vy: 0, kind: 'ring' as const, ...hazard }))
   };
 }
 
@@ -214,6 +214,18 @@ export function validateChapter(raw: unknown): string[] {
     }
     if (!hazard || !Number.isFinite(hazard.period) || hazard.period < 0 || !Number.isFinite(hazard.on) || hazard.on < 0) {
       errors.push(`hazard ${hazard?.id} needs a valid blink cycle`);
+    }
+    if (hazard && hazard.kind !== undefined && hazard.kind !== 'ring' && hazard.kind !== 'car') {
+      errors.push(`hazard ${hazard.id} needs a known kind`);
+    }
+    if (
+      hazard &&
+      ((hazard.vx !== undefined && !Number.isFinite(hazard.vx)) ||
+        (hazard.vy !== undefined && !Number.isFinite(hazard.vy)) ||
+        Math.abs(hazard.vx ?? 0) > 600 ||
+        Math.abs(hazard.vy ?? 0) > 600)
+    ) {
+      errors.push(`hazard ${hazard.id} needs a sane velocity`);
     }
   }
 

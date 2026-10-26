@@ -108,6 +108,10 @@ export interface Hazard {
   /** Blink cycle in frames; period 0 means always on. */
   period: number;
   on: number;
+  /** Drift velocity in px/s; wraps around the extended bounds. */
+  vx: number;
+  vy: number;
+  kind: 'ring' | 'car';
 }
 
 export interface WindZone {
@@ -216,12 +220,25 @@ export function placeShards(
 /** Ritual rings, exterminator fields, and other static dangers. */
 export function placeHazards(
   world: World,
-  hazards: { id: string; x: number; y: number; r: number; period?: number; on?: number }[]
+  hazards: {
+    id: string;
+    x: number;
+    y: number;
+    r: number;
+    period?: number;
+    on?: number;
+    vx?: number;
+    vy?: number;
+    kind?: Hazard['kind'];
+  }[]
 ): void {
   world.hazards = hazards.map((hazard) => ({
-    ...hazard,
-    period: hazard.period ?? 0,
-    on: hazard.on ?? 0
+    period: 0,
+    on: 0,
+    vx: 0,
+    vy: 0,
+    kind: 'ring' as const,
+    ...hazard
   }));
 }
 
@@ -475,8 +492,21 @@ function hurtPlayer(world: World): void {
   player.invulnFrames = tuning.player.invulnFrames;
 }
 
-function stepShards(world: World): void {
-  for (const shard of world.shards) {
+function stepHazards(world: World): void {
+  const spanX = world.tuning.width + 200;
+  const spanY = world.tuning.height + 200;
+  for (const hazard of world.hazards) {
+    if (hazard.vx === 0 && hazard.vy === 0) continue;
+    hazard.x += hazard.vx * STEP;
+    hazard.y += hazard.vy * STEP;
+    if (hazard.x > world.tuning.width + 100) hazard.x -= spanX;
+    if (hazard.x < -100) hazard.x += spanX;
+    if (hazard.y > world.tuning.height + 100) hazard.y -= spanY;
+    if (hazard.y < -100) hazard.y += spanY;
+  }
+}
+
+function stepShards(world: World): void {  for (const shard of world.shards) {
     if (shard.taken) continue;
     const dx = world.player.x - shard.x;
     const dy = world.player.y - shard.y;
@@ -496,6 +526,7 @@ export function stepWorld(world: World, input: SimInput): void {
   fixToArray(world, input);
   stepBullets(world);
   stepEnemies(world);
+  stepHazards(world);
   stepShards(world);
   collide(world);
 
@@ -560,6 +591,9 @@ export function hashWorld(world: World): string {
   parts.push(world.paranoia, world.armorSpent ? 1 : 0, world.slowmoFrames, world.shardSlots, world.shardsUsed, world.events.length);
   for (const shard of world.shards) {
     parts.push(shard.taken ? 1 : 0);
+  }
+  for (const hazard of world.hazards) {
+    parts.push(q(hazard.x), q(hazard.y));
   }
 
   let hash = 0x811c9dc5;

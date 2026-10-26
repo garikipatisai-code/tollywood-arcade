@@ -52,6 +52,7 @@ export interface WorldTheme {
   auto?: boolean;
   locketWindow?: { x: number; y: number };
   workshop?: boolean;
+  highway?: boolean;
   books?: BookSpine[];
   cupLake?: { x: number; y: number; rx: number; ry: number };
   lamp?: { x: number; y: number };
@@ -163,23 +164,25 @@ export const THEMES: Record<string, WorldTheme> = {
     workshop: true
   },
   ch4: {
-    skyTop: 0x4e1d2e,
-    skyBottom: 0xe05a4e,
-    ground: 0x38141e,
-    floorTint: 0xc08878,
+    skyTop: 0x0a0e24,
+    skyBottom: 0x3a3a5e,
+    ground: 0x14141e,
+    floorTint: 0x3a3e4e,
     grass: false,
     trees: [
-      { tex: 'tree-1', x: 100, y: 330, scale: 2.4, tint: 0x8e3a3a, alpha: 0.6 },
-      { tex: 'tree-5', x: 860, y: 330, scale: 2.4, tint: 0x8e3a3a, alpha: 0.6 }
+      { tex: 'tree-1', x: 60, y: 300, scale: 2.2, tint: 0x14241e, alpha: 0.8 },
+      { tex: 'tree-5', x: 900, y: 300, scale: 2.2, tint: 0x14241e, alpha: 0.8 }
     ],
     castles: false,
-    props: [
-      { tex: 'dung-68', x: 480, y: 470, scale: 3, tint: BERING },
-      { tex: 'dung-29', x: 480, y: 180, scale: 3, tint: BERING }
-    ],
+    props: [],
     clouds: 2,
-    glows: [{ x: 480, y: 180, color: 0xffb060, scale: 3 }],
-    torchAtGlows: false
+    glows: [
+      { x: 160, y: 290, color: 0xfff2cc, scale: 2.2 },
+      { x: 480, y: 290, color: 0xfff2cc, scale: 2.2 },
+      { x: 800, y: 290, color: 0xfff2cc, scale: 2.2 }
+    ],
+    torchAtGlows: false,
+    highway: true
   },
   ch5: {
     skyTop: 0x1e3e1e,
@@ -469,6 +472,56 @@ export function buildWorld(scene: Phaser.Scene, themeKey: string, opts: { glows?
     deco.fillTriangle(lock.x - 14 * s, lock.y - s, lock.x + 14 * s, lock.y - s, lock.x, lock.y + 14 * s);
     deco.fillStyle(0xffffff, 0.55);
     deco.fillCircle(lock.x - 9 * s, lock.y - 9 * s, 3 * s);
+  }
+
+  if (theme.highway) {
+    // City-glow horizon + asphalt with lane dashes.
+    deco.fillStyle(0xe08a4e, 0.22);
+    deco.fillRect(0, 250, 960, 50);
+    deco.fillStyle(0x1d1d28, 1);
+    deco.fillRect(0, 300, 960, 240);
+    deco.fillStyle(0xe8b93d, 1);
+    for (let x = 20; x < 960; x += 90) deco.fillRect(x, 396, 46, 6);
+    deco.fillStyle(0xf3ecdd, 0.7);
+    for (let x = 20; x < 960; x += 90) deco.fillRect(x, 336, 46, 4);
+    deco.fillRect(0, 306, 960, 4);
+    // Guard rails.
+    deco.fillStyle(0x8a8598, 1);
+    deco.fillRect(0, 288, 960, 5);
+    for (let x = 40; x < 960; x += 80) deco.fillRect(x, 268, 7, 24);
+    // Streetlight poles under the glow pools.
+    deco.fillStyle(0x2e2a38, 1);
+    for (const lx of [160, 480, 800]) {
+      deco.fillRect(lx - 4, 170, 8, 120);
+      deco.fillRect(lx - 4, 170, 60, 8);
+      deco.fillStyle(0xfff2cc, 1);
+      deco.fillCircle(lx + 52, 182, 7);
+      deco.fillStyle(0x2e2a38, 1);
+    }
+    // Airport sign, English + Telugu.
+    deco.fillStyle(0x1d3a2e, 1);
+    deco.fillRect(700, 96, 220, 76);
+    deco.lineStyle(3, 0xf3ecdd, 0.9);
+    deco.strokeRect(700, 96, 220, 76);
+    deco.fillStyle(0x2e2a38, 1);
+    deco.fillRect(720, 172, 10, 60);
+    deco.fillRect(890, 172, 10, 60);
+    scene.add
+      .text(810, 122, '✈ Airport', {
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: '24px',
+        color: '#f3ecdd'
+      })
+      .setOrigin(0.5)
+      .setDepth(-9);
+    scene.add
+      .text(810, 150, 'విమానాశ్రయం', {
+        fontFamily: '"Noto Sans Telugu", "Noto Sans", system-ui, sans-serif',
+        fontSize: '20px',
+        color: '#e8b04b'
+      })
+      .setOrigin(0.5)
+      .setDepth(-9);
   }
 
   if (theme.workshop) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createDirector, stepDirector } from '../../src/engines/shooter/director';
-import { createWorld, placeShards, placeWindZones, setParanoia, stepWorld } from '../../src/engines/shooter/sim';
+import { createWorld, placeHazards, placeShards, placeWindZones, setParanoia, stepWorld } from '../../src/engines/shooter/sim';
 import {
   CHAPTERS,
   chapterStatus,
@@ -75,6 +75,7 @@ function playChapter(chapter: Chapter): { status: string; frames: number } {
   setParanoia(world, chapter.paranoia);
   placeShards(world, chapter.shards);
   placeWindZones(world, chapter.wind ?? []);
+  placeHazards(world, chapter.hazards ?? []);
   const director = createDirector(chapter.waves);
 
   const maxFrames = chapter.timeSeconds * 60 + 60;
@@ -155,6 +156,7 @@ describe('chapters 4-5', () => {
     expect(ch4.paranoia).toBe(40);
     expect(ch4.loadout.needle).toBe(true);
     expect(ch4.requiredShards).toHaveLength(2);
+    expect(ch4.hazards.filter((h) => h.kind === 'car')).toHaveLength(3);
     const result = playChapter(ch4);
     expect(result.status).toBe('complete');
   });
