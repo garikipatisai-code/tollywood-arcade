@@ -41,6 +41,7 @@ npm run assets   # per-game assets ≤5 MiB, licences present
 | v3.5-ch5 | — | — | — | — | — | — | fume slow zones; siege screenshot-verified; y-clamp regression fixed; live 200 |
 | v3.6-ch6 | — | — | — | — | — | — | sanctum + fire-bloom; screenshot-verified; budgets hold; live 200 |
 | v3.7-ch7 | — | — | — | — | — | — | guard patrols; mansion screenshot-verified; budgets hold; live 200 |
+| v3.8-ch8 | — | — | — | — | — | — | vent alley + blast cinematic; screenshot-verified; budgets hold; live 200 |
 
 Automated numbers are not a substitute for the manual row; leave it blank until
 the device run happens.
