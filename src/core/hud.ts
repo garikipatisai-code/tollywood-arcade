@@ -45,6 +45,8 @@ export interface Hud {
   onNext(handler: () => void): void;
   onQuality(handler: () => void): void;
   setQualityLabel(text: string): void;
+  setObjective(text: string): void;
+  flashBanner(text: string): void;
   showCutscene(panels: CutPanelView[], skipLabel: string, nextLabel: string, onDone: () => void): void;
   renderChapterSelect(
     model: ChapterSelectModel,
@@ -105,6 +107,9 @@ export function createHud(labels: HudLabels): Hud {
   const lives = makeStat(labels.lives);
   const time = makeStat(labels.time);
 
+  const objective = element('div', 'ta-hud__objective');
+  objective.setAttribute('role', 'status');
+
   const hudActions = element('div', 'ta-hud__actions');
   const muteButton = element('button', 'ta-hud__button');
   muteButton.type = 'button';
@@ -157,7 +162,24 @@ export function createHud(labels: HudLabels): Hud {
 
   actions.append(resume, retry, next, storyLink, back);
   menu.append(title, body, controls, actions);
+
+  objective.style.cssText =
+    'position:absolute;top:3.2rem;left:50%;transform:translateX(-50%);' +
+    'font-family:ui-monospace,monospace;font-size:.85rem;color:#ffe9a8;' +
+    'text-shadow:0 1px 2px #000;pointer-events:none;white-space:nowrap;';
+  objective.hidden = true;
+
+  const banner = element('div', 'ta-hud__banner');
+  banner.setAttribute('role', 'status');
+  banner.style.cssText =
+    'position:absolute;top:38%;left:50%;transform:translate(-50%,-50%) scale(.9);' +
+    'font-size:clamp(1.2rem,4vw,2rem);font-weight:800;color:#ffd94d;' +
+    'text-shadow:0 2px 0 #000,0 0 24px #e07b39;opacity:0;pointer-events:none;' +
+    'transition:opacity .25s,transform .25s;white-space:nowrap;z-index:4;';
+  let bannerTimer: ReturnType<typeof setTimeout> | undefined;
+
   root.append(stats, hudActions);
+  root.append(objective, banner);
 
   const container = document.getElementById('game-container') ?? document.body;
   container.append(root, menu);
@@ -365,6 +387,20 @@ export function createHud(labels: HudLabels): Hud {
     },
     setQualityLabel(text: string) {
       qualityButton.textContent = text;
+    },
+    setObjective(text: string) {
+      objective.hidden = text.length === 0;
+      if (text.length > 0) objective.textContent = text;
+    },
+    flashBanner(text: string) {
+      banner.textContent = text;
+      banner.style.opacity = '1';
+      banner.style.transform = 'translate(-50%,-50%) scale(1)';
+      if (bannerTimer) clearTimeout(bannerTimer);
+      bannerTimer = setTimeout(() => {
+        banner.style.opacity = '0';
+        banner.style.transform = 'translate(-50%,-50%) scale(.9)';
+      }, 1600);
     }
   };
 }

@@ -52,6 +52,10 @@ export interface Enemy {
   hp: number;
   radius: number;
   score: number;
+  harmless: boolean;
+  marked: boolean;
+  enraged: boolean;
+  burnCd: number;
 }
 
 export interface Bullet {
@@ -84,7 +88,7 @@ export const FULL_LOADOUT: Loadout = { needle: true, armor: true, cannon: true }
 /** v1 behavior exactly: sting only, no armor, no piercing. */
 export const DEFAULT_LOADOUT: Loadout = { needle: true, armor: false, cannon: false };
 
-export type SimEventType = 'shard' | 'objective';
+export type SimEventType = 'shard' | 'objective' | 'carry' | 'deliver' | 'detonate' | 'slain' | 'martyr';
 
 export interface SimEvent {
   tick: number;
@@ -98,6 +102,30 @@ export interface Shard {
   y: number;
   r: number;
   taken: boolean;
+  /** Deliver to a dropoff instead of taking on touch. */
+  carry: boolean;
+  /** Countdown frames once armed; -1 = plain. */
+  fuse: number;
+  /** Follows the player once touched. */
+  escort: boolean;
+  /** Touching detonates victory. */
+  martyr: boolean;
+  fuseLeft: number;
+  escorting: boolean;
+}
+
+export interface Dropoff {
+  id: string;
+  x: number;
+  y: number;
+  r: number;
+}
+
+export interface ExitZone {
+  id: string;
+  x: number;
+  y: number;
+  r: number;
 }
 
 export interface Hazard {
@@ -152,6 +180,10 @@ export interface World {
   hazards: Hazard[];
   wind: WindZone[];
   slow: SlowZone[];
+  dropoffs: Dropoff[];
+  carried: string | null;
+  swift: number;
+  exits: ExitZone[];
   /** Scored shard slots (base 2, +1 with the wing amulet). */
   shardSlots: number;
   shardsUsed: number;
@@ -174,7 +206,11 @@ function emptyEnemy(): Enemy {
     vy: 0,
     hp: 0,
     radius: 0,
-    score: 0
+    score: 0,
+    harmless: false,
+    marked: false,
+    enraged: false,
+    burnCd: 0
   };
 }
 
@@ -200,6 +236,10 @@ export function createWorld(seed: number, tuning: Tuning, loadout: Loadout = DEF
     hazards: [],
     wind: [],
     slow: [],
+    dropoffs: [],
+    carried: null,
+    swift: 0,
+    exits: [],
     shardSlots: 0,
     shardsUsed: 0,
     events: [],
@@ -223,10 +263,40 @@ export function setParanoia(world: World, value: number): void {
 
 export function placeShards(
   world: World,
-  shards: { id: string; x: number; y: number; r?: number }[]
+  shards: {
+    id: string;
+    x: number;
+    y: number;
+    r?: number;
+    carry?: boolean;
+    fuse?: number;
+    escort?: boolean;
+    martyr?: boolean;
+  }[]
 ): void {
-  world.shards = shards.map((shard) => ({ ...shard, r: shard.r ?? 10, taken: false }));
+  world.shards = shards.map((shard) => ({
+    carry: false,
+    fuse: -1,
+    escort: false,
+    martyr: false,
+    ...shard,
+    r: shard.r ?? 10,
+    taken: false,
+    fuseLeft: -1,
+    escorting: false
+  }));
 }
+
+export function placeExits(world: World, spots: { id: string; x: number; y: number; r?: number }[]): void {
+  world.exits = spots.map((spot) => ({ ...spot, r: spot.r ?? 24 }));
+}
+
+export function placeDropoffs(world: World, spots: { id: string; x: number; y: number; r?: number }[]): void {
+  world.dropoffs = spots.map((spot) => ({ ...spot, r: spot.r ?? 16 }));
+}
+
+export const SWIFT_STEP = 0.12;
+export const SWIFT_CAP = 5;
 
 /** Ritual rings, exterminator fields, and other static dangers. */
 export function placeHazards(
@@ -290,7 +360,8 @@ export function spawnEnemy(
   y: number,
   vx = 0,
   vy = 0,
-  hp?: number
+  hp?: number,
+  flags?: { harmless?: boolean; marked?: boolean; enraged?: boolean }
 ): Enemy | null {
   const slot = world.enemies.find((enemy) => !enemy.alive);
   if (!slot) return null;
@@ -305,6 +376,10 @@ export function spawnEnemy(
   slot.hp = hp ?? stats.hp;
   slot.radius = stats.radius;
   slot.score = stats.score;
+  slot.harmless = flags?.harmless ?? false;
+  slot.marked = flags?.marked ?? false;
+  slot.enraged = flags?.enraged ?? false;
+  slot.burnCd = 0;
   return slot;
 }
 
@@ -357,8 +432,9 @@ function fixToArray(world: World, input: SimInput): void {
     grip = Math.min(grip, zone.factor);
   }
 
-  player.x = clamp(player.x + input.x * tuning.player.speed * grip * STEP, radius, tuning.width - radius);
-  player.y = clamp(player.y + input.y * tuning.player.speed * grip * STEP, radius, tuning.height - radius);
+  const pace = tuning.player.speed * (1 + SWIFT_STEP * Math.min(world.swift, SWIFT_CAP));
+  player.x = clamp(player.x + input.x * pace * grip * STEP, radius, tuning.width - radius);
+  player.y = clamp(player.y + input.y * pace * grip * STEP, radius, tuning.height - radius);
 
   for (const zone of world.wind) {
     if (!hazardActive(zone, world.tick)) continue;
@@ -411,6 +487,7 @@ function stepBullets(world: World): void {
 function stepEnemies(world: World): void {
   for (const enemy of world.enemies) {
     if (!enemy.alive) continue;
+    if (enemy.burnCd > 0) enemy.burnCd--;
 
     enemy.x += enemy.vx * STEP;
     enemy.y += enemy.vy * STEP;
@@ -444,10 +521,20 @@ function collide(world: World): void {
       enemy.hp -= tuning.bullet.damage;
       enemy.vx += bullet.vx * KNOCKBACK;
       enemy.vy += bullet.vy * KNOCKBACK;
+      if (enemy.enraged && enemy.hp > 0) {
+        const speed = Math.hypot(enemy.vx, enemy.vy);
+        if (speed > 0 && speed < 400) {
+          enemy.vx *= 1.15;
+          enemy.vy *= 1.15;
+        }
+      }
 
       if (enemy.hp <= 0) {
         enemy.alive = false;
         world.score += enemy.score;
+        if (enemy.marked) {
+          world.events.push({ tick: world.tick, type: 'slain', id: enemy.kind });
+        }
       }
       break;
     }
@@ -456,7 +543,7 @@ function collide(world: World): void {
   if (!player.alive || player.invulnFrames > 0) return;
 
   for (const enemy of world.enemies) {
-    if (!enemy.alive) continue;
+    if (!enemy.alive || enemy.harmless) continue;
 
     const dx = player.x - enemy.x;
     const dy = player.y - enemy.y;
@@ -471,6 +558,7 @@ function collide(world: World): void {
 
     enemy.alive = false;
     hurtPlayer(world);
+    dropCarry(world);
     if (!player.alive || player.invulnFrames > 0) return;
     break;
   }
@@ -483,7 +571,29 @@ function collide(world: World): void {
     const dy = player.y - hazard.y;
     if (dx * dx + dy * dy > (tuning.player.radius + hazard.r) ** 2) continue;
     hurtPlayer(world);
+    dropCarry(world);
     break;
+  }
+
+  for (const enemy of world.enemies) {
+    if (!enemy.alive || enemy.burnCd > 0) continue;
+    for (const hazard of world.hazards) {
+      if (!hazardActive(hazard, world.tick)) continue;
+      const dx = enemy.x - hazard.x;
+      const dy = enemy.y - hazard.y;
+      const reach = enemy.radius + hazard.r;
+      if (dx * dx + dy * dy > reach * reach) continue;
+      enemy.hp -= 1;
+      enemy.burnCd = 20;
+      if (enemy.hp <= 0) {
+        enemy.alive = false;
+        world.score += enemy.score;
+        if (enemy.marked) {
+          world.events.push({ tick: world.tick, type: 'slain', id: enemy.kind });
+        }
+      }
+      break;
+    }
   }
 
   if (player.alive) {
@@ -493,14 +603,99 @@ function collide(world: World): void {
       const dy = player.y - shard.y;
       const reach = tuning.player.radius + shard.r;
       if (dx * dx + dy * dy > reach * reach) continue;
-      shard.taken = true;
-      if (world.shardsUsed < world.shardSlots) {
-        world.shardsUsed++;
-        world.score += world.tuning.shardScore ?? 250;
+
+      if (shard.martyr) {
+        detonateMartyr(world, shard);
+        continue;
       }
-      world.events.push({ tick: world.tick, type: 'shard', id: shard.id });
+      if (shard.fuse >= 0) {
+        if (shard.fuseLeft < 0) shard.fuseLeft = shard.fuse;
+        continue;
+      }
+      if (shard.escort) {
+        shard.escorting = true;
+        continue;
+      }
+      if (shard.carry) {
+        if (world.carried !== null) continue;
+        world.carried = shard.id;
+        world.events.push({ tick: world.tick, type: 'carry', id: shard.id });
+        continue;
+      }
+
+      takeShard(world, shard);
+    }
+
+    if (world.carried !== null) {
+      for (const spot of world.dropoffs) {
+        const dx = player.x - spot.x;
+        const dy = player.y - spot.y;
+        if (dx * dx + dy * dy > (tuning.player.radius + spot.r) ** 2) continue;
+        const shard = world.shards.find((s) => s.id === world.carried);
+        world.carried = null;
+        if (shard && !shard.taken) {
+          takeShard(world, shard);
+          world.events.push({ tick: world.tick, type: 'deliver', id: shard.id });
+        }
+        break;
+      }
+    }
+
+    for (const shard of world.shards) {
+      if (shard.taken || !shard.escorting) continue;
+      for (const exit of world.exits) {
+        const dx = player.x - exit.x;
+        const dy = player.y - exit.y;
+        if (dx * dx + dy * dy > (tuning.player.radius + exit.r) ** 2) continue;
+        shard.escorting = false;
+        takeShard(world, shard);
+        world.events.push({ tick: world.tick, type: 'deliver', id: shard.id });
+        break;
+      }
     }
   }
+}
+
+/** The cannon dive: everything burns, Gali falls, the run is won. */
+function detonateMartyr(world: World, shard: Shard): void {
+  shard.taken = true;
+  world.events.push({ tick: world.tick, type: 'martyr', id: shard.id });
+  for (const enemy of world.enemies) {
+    if (!enemy.alive) continue;
+    enemy.alive = false;
+    world.score += enemy.score;
+    if (enemy.marked) {
+      world.events.push({ tick: world.tick, type: 'slain', id: enemy.kind });
+    }
+  }
+  world.carried = null;
+  world.player.alive = false;
+  world.outcome = 'won';
+}
+
+/** A hit drops whatever Gali carries at the impact point. */
+function dropCarry(world: World): void {
+  if (world.carried !== null) {
+    const shard = world.shards.find((s) => s.id === world.carried);
+    world.carried = null;
+    if (shard && !shard.taken) {
+      shard.x = world.player.x;
+      shard.y = world.player.y;
+    }
+  }
+  for (const shard of world.shards) {
+    if (shard.escorting && !shard.taken) shard.escorting = false;
+  }
+}
+
+function takeShard(world: World, shard: Shard): void {
+  shard.taken = true;
+  world.swift = Math.min(world.swift + 1, SWIFT_CAP);
+  if (world.shardsUsed < world.shardSlots) {
+    world.shardsUsed++;
+    world.score += world.tuning.shardScore ?? 250;
+  }
+  world.events.push({ tick: world.tick, type: 'shard', id: shard.id });
 }
 
 function hurtPlayer(world: World): void {
@@ -533,8 +728,21 @@ function stepHazards(world: World): void {
   }
 }
 
+export const ESCORT_SPEED = 200;
+
 function stepShards(world: World): void {  for (const shard of world.shards) {
     if (shard.taken) continue;
+    if (shard.escorting) {
+      const dx = world.player.x - shard.x;
+      const dy = world.player.y - shard.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance > 26) {
+        const pull = Math.min(distance - 20, ESCORT_SPEED * STEP);
+        shard.x += (dx / distance) * pull;
+        shard.y += (dy / distance) * pull;
+      }
+      continue;
+    }
     const dx = world.player.x - shard.x;
     const dy = world.player.y - shard.y;
     const distance = Math.hypot(dx, dy);
@@ -542,6 +750,16 @@ function stepShards(world: World): void {  for (const shard of world.shards) {
     const pull = Math.min(distance, MAGNET_SPEED * STEP);
     shard.x += (dx / distance) * pull;
     shard.y += (dy / distance) * pull;
+  }
+}
+
+function stepFuses(world: World): void {
+  for (const shard of world.shards) {
+    if (shard.taken || shard.fuseLeft < 0) continue;
+    shard.fuseLeft--;
+    if (shard.fuseLeft > 0) continue;
+    takeShard(world, shard);
+    world.events.push({ tick: world.tick, type: 'detonate', id: shard.id });
   }
 }
 
@@ -555,6 +773,7 @@ export function stepWorld(world: World, input: SimInput): void {
   stepEnemies(world);
   stepHazards(world);
   stepShards(world);
+  stepFuses(world);
   collide(world);
 
   world.runFrames++;
@@ -616,6 +835,16 @@ export function hashWorld(world: World): string {
     );
   }
   parts.push(world.paranoia, world.armorSpent ? 1 : 0, world.slowmoFrames, world.shardSlots, world.shardsUsed, world.events.length);
+  parts.push(world.swift, world.carried ? world.carried.length : 0);
+  if (world.carried) {
+    for (const char of world.carried) parts.push(char.charCodeAt(0));
+  }
+  for (const shard of world.shards) {
+    parts.push(shard.taken ? 1 : 0, shard.fuseLeft, shard.escorting ? 1 : 0);
+  }
+  for (const enemy of world.enemies) {
+    parts.push(enemy.burnCd);
+  }
   for (const shard of world.shards) {
     parts.push(shard.taken ? 1 : 0);
   }

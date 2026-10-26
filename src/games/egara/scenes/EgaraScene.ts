@@ -42,6 +42,8 @@ import {
   hazardActive,
   placeHazards,
   placeShards,
+  placeDropoffs,
+  placeExits,
   placeSlowZones,
   placeWindZones,
   setParanoia,
@@ -149,6 +151,8 @@ export class EgaraScene extends Phaser.Scene {
       placeHazards(this.world, this.chapter.hazards ?? []);
       placeWindZones(this.world, this.chapter.wind ?? []);
       placeSlowZones(this.world, this.chapter.slow ?? []);
+      placeDropoffs(this.world, this.chapter.dropoffs ?? []);
+      placeExits(this.world, this.chapter.exits ?? []);
       setShardSlots(this.world, BASE_SHARD_SLOTS + (this.ngplus ? 1 : 0));
       this.director = createDirector(this.chapter.waves);
     } else {
@@ -645,7 +649,25 @@ export class EgaraScene extends Phaser.Scene {
     this.seenEvents = this.world.events.length;
     for (const event of fresh) {
       if (event.type === 'shard') this.audio.play('shard');
+      else if (event.type === 'slain') this.hud.flashBanner(`${event.id.toUpperCase()} DESTROYED`);
     }
+    this.hud.setObjective(this.chapter ? this.objectiveText() : '');
+  }
+
+  private objectiveText(): string {
+    const chapter = this.chapter;
+    if (!chapter) return '';
+    const goal = translate(this.save.lang, chapter.goalKey as MessageKey);
+    const total = chapter.requiredShards.length;
+    if (total === 0) return goal;
+    const done = chapter.requiredShards.filter((id) =>
+      this.world.shards.find((s) => s.id === id)?.taken
+    ).length;
+    if (this.world.carried !== null) return `${goal} → ✓ deliver! (${done}/${total})`;
+    if (this.world.shards.some((s) => s.escorting && !s.taken)) {
+      return `${goal} → ✓ guide! (${done}/${total})`;
+    }
+    return `${goal} (${done}/${total})`;
   }
 
   private checkEnd(): void {
@@ -695,12 +717,27 @@ export class EgaraScene extends Phaser.Scene {
 
     this.world.shards.forEach((shard, index) => {
       if (shard.taken) return;
+      const carried = this.world.carried === shard.id;
       const bob = Math.sin((this.frames + index * 17) / 20) * 3;
-      g.fillStyle(0xe8b04b, 1);
-      g.fillCircle(shard.x + ox, shard.y + bob + oy, 7);
-      g.fillStyle(0xfff6d8, 1);
-      g.fillCircle(shard.x + ox, shard.y + bob + oy, 3);
+      const sx = carried ? lerp(this.prevPlayer.x, this.world.player.x, blend) : shard.x;
+      const sy = carried ? lerp(this.prevPlayer.y, this.world.player.y, blend) - 22 : shard.y + bob;
+      g.fillStyle(carried ? 0xfff6d8 : 0xe8b04b, 1);
+      g.fillCircle(sx + ox, sy + oy, carried ? 5 : 7);
+      g.fillStyle(carried ? 0xe8b04b : 0xfff6d8, 1);
+      g.fillCircle(sx + ox, sy + oy, carried ? 2.5 : 3);
     });
+
+    const pulse = 1 + 0.1 * Math.sin(this.frames / 15);
+    for (const spot of this.world.dropoffs) {
+      g.lineStyle(2, 0x6ec6b8, 0.9);
+      g.strokeCircle(spot.x + ox, spot.y + oy, spot.r * pulse);
+    }
+    for (const exit of this.world.exits) {
+      g.lineStyle(3, 0xffd94d, 0.95);
+      g.strokeCircle(exit.x + ox, exit.y + oy, exit.r * pulse);
+      g.lineStyle(1, 0xffd94d, 0.5);
+      g.strokeCircle(exit.x + ox, exit.y + oy, exit.r * pulse * 0.7);
+    }
 
     for (const hazard of this.world.hazards) {
       if (!hazardActive(hazard, this.world.tick)) continue;

@@ -15,11 +15,11 @@
     { "id": "vent-4", "x": 580, "y": 200, "r": 24, "period": 120, "on": 55 }
   ],
   "waves": [
-    { "atSeconds": 3, "kind": "boss", "count": 1, "pattern": "top", "hp": 8 },
+    { "atSeconds": 3, "kind": "boss", "count": 1, "pattern": "top", "hp": 8, "enraged": true, "marked": true },
     { "atSeconds": 50, "kind": "spray", "count": 2, "pattern": "sides" }
   ],
   "shards": [
     { "id": "powder", "x": 240, "y": 400 },
-    { "id": "cannon", "x": 480, "y": 120 }
+    { "id": "cannon", "x": 480, "y": 120, "martyr": true }
   ]
 }

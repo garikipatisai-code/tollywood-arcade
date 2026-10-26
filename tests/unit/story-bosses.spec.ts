@@ -3,6 +3,8 @@ import { createDirector, stepDirector } from '../../src/engines/shooter/director
 import {
   createWorld,
   hazardActive,
+  placeDropoffs,
+  placeExits,
   placeHazards,
   placeShards,
   setParanoia,
@@ -29,7 +31,24 @@ function nearestEnemy(world: ReturnType<typeof createWorld>): { x: number; y: nu
   return best;
 }
 
-function hunt(world: ReturnType<typeof createWorld>, required: string[]): SimInput {
+function hunt(world: ReturnType<typeof createWorld>, chapter: Chapter): SimInput {
+  if (world.carried !== null && chapter.dropoffs.length > 0) {
+    const spot = chapter.dropoffs[0];
+    const dx = spot.x - world.player.x;
+    const dy = spot.y - world.player.y;
+    const d = Math.hypot(dx, dy) || 1;
+    if (d < 24) return { x: 0, y: 0, sting: true };
+    return { x: dx / d, y: dy / d, sting: true };
+  }
+  const escorting = world.shards.some((s) => s.escorting && !s.taken);
+  if (escorting && chapter.exits.length > 0) {
+    const exit = chapter.exits[0];
+    const dx = exit.x - world.player.x;
+    const dy = exit.y - world.player.y;
+    const d = Math.hypot(dx, dy) || 1;
+    if (d < 24) return { x: 0, y: 0, sting: true };
+    return { x: dx / d, y: dy / d, sting: true };
+  }
   const foe = nearestEnemy(world);
   if (foe && foe.d <= 220) {
     return {
@@ -38,7 +57,7 @@ function hunt(world: ReturnType<typeof createWorld>, required: string[]): SimInp
       sting: true
     };
   }
-  const open = world.shards.filter((s) => !s.taken && required.includes(s.id));
+  const open = world.shards.filter((s) => !s.taken && chapter.requiredShards.includes(s.id));
   let goal: { x: number; y: number; d: number } | null = null;
   for (const shard of open) {
     const d = Math.hypot(shard.x - world.player.x, shard.y - world.player.y);
@@ -128,12 +147,14 @@ describe('mansion and finale', () => {
     setParanoia(world, ch7!.paranoia);
     placeShards(world, ch7!.shards);
     placeHazards(world, ch7!.hazards ?? []);
+    placeDropoffs(world, ch7!.dropoffs ?? []);
+    placeExits(world, ch7!.exits ?? []);
     const director = createDirector(ch7!.waves);
 
     let status: string = 'running';
     const maxFrames = ch7!.timeSeconds * 60 + 60;
     for (let i = 0; i < maxFrames; i++) {
-      stepWorld(world, hunt(world, ch7!.requiredShards));
+      stepWorld(world, hunt(world, ch7!));
       stepDirector(world, director);
       status = chapterStatus(world, director, ch7!);
       if (status === 'complete' || world.outcome !== 'running') break;
@@ -150,12 +171,14 @@ describe('mansion and finale', () => {
     const world = createWorld(35, EGARA_TUNING, ch8!.loadout);
     setParanoia(world, ch8!.paranoia);
     placeShards(world, ch8!.shards);
+    placeDropoffs(world, ch8!.dropoffs ?? []);
+    placeExits(world, ch8!.exits ?? []);
     const director = createDirector(ch8!.waves);
 
     let status: string = 'running';
     const maxFrames = ch8!.timeSeconds * 60 + 60;
     for (let i = 0; i < maxFrames; i++) {
-      stepWorld(world, hunt(world, ch8!.requiredShards));
+      stepWorld(world, hunt(world, ch8!));
       stepDirector(world, director);
       status = chapterStatus(world, director, ch8!);
       if (status === 'complete' || world.outcome !== 'running') break;

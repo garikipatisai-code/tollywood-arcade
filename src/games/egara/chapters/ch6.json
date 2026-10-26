@@ -10,7 +10,7 @@
   "tint": 13166329,
   "requiredShards": [],
   "waves": [
-    { "atSeconds": 3, "kind": "boss", "count": 1, "pattern": "top" },
+    { "atSeconds": 3, "kind": "boss", "count": 1, "pattern": "top", "enraged": true },
     { "atSeconds": 20, "kind": "spray", "count": 2, "pattern": "sides" }
   ],
   "shards": [

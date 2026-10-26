@@ -17,7 +17,7 @@
     { "atSeconds": 30, "kind": "swatter", "count": 3, "pattern": "random" }
   ],
   "shards": [
-    { "id": "nest-1", "x": 300, "y": 420 },
-    { "id": "nest-2", "x": 660, "y": 420 }
+    { "id": "nest-1", "x": 300, "y": 420, "fuse": 180 },
+    { "id": "nest-2", "x": 660, "y": 420, "fuse": 180 }
   ]
 }

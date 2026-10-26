@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createDirector, stepDirector } from '../../src/engines/shooter/director';
-import { createWorld, placeHazards, placeShards, placeSlowZones, placeWindZones, setParanoia, stepWorld } from '../../src/engines/shooter/sim';
+import { createWorld, placeDropoffs, placeExits, placeHazards, placeShards, placeSlowZones, placeWindZones, setParanoia, stepWorld } from '../../src/engines/shooter/sim';
 import {
   CHAPTERS,
   chapterStatus,
@@ -12,9 +12,9 @@ import { EGARA_TUNING } from '../../src/games/egara/content';
 
 const idle: SimInput = { x: 0, y: 0, sting: false };
 
-function seekShards(world: ReturnType<typeof createWorld>, required: string[]): SimInput {
+function seekShards(world: ReturnType<typeof createWorld>, required: string[], sting = true): SimInput {
   const open = world.shards.filter((s) => !s.taken && required.includes(s.id));
-  if (open.length === 0) return { x: 0, y: 0, sting: true };
+  if (open.length === 0) return { x: 0, y: 0, sting };
 
   let best = open[0];
   let bestDistance = Number.POSITIVE_INFINITY;
@@ -25,49 +25,52 @@ function seekShards(world: ReturnType<typeof createWorld>, required: string[]): 
       bestDistance = d;
     }
   }
-  if (bestDistance < 24) return { x: 0, y: 0, sting: true };
+  if (bestDistance < 24) return { x: 0, y: 0, sting };
   return {
     x: (best.x - world.player.x) / bestDistance,
     y: (best.y - world.player.y) / bestDistance,
-    sting: true
+    sting
   };
 }
 
-function kite(world: ReturnType<typeof createWorld>): SimInput {
-  let nearest = null as null | { x: number; y: number };
-  let bestDistance = Number.POSITIVE_INFINITY;
+function nearestHarmful(world: ReturnType<typeof createWorld>): { x: number; y: number; d: number } | null {
+  let best: { x: number; y: number; d: number } | null = null;
   for (const enemy of world.enemies) {
-    if (!enemy.alive) continue;
+    if (!enemy.alive || enemy.harmless) continue;
     const d = Math.hypot(enemy.x - world.player.x, enemy.y - world.player.y);
-    if (d < bestDistance) {
-      bestDistance = d;
-      nearest = enemy;
-    }
+    if (!best || d < best.d) best = { x: enemy.x, y: enemy.y, d };
   }
-  if (!nearest || bestDistance > 160) return { x: 0, y: 0, sting: true };
-  return {
-    x: (world.player.x - nearest.x) / bestDistance,
-    y: (world.player.y - nearest.y) / bestDistance,
-    sting: true
-  };
+  return best;
+}
+
+function seekPoint(world: ReturnType<typeof createWorld>, x: number, y: number, sting: boolean): SimInput {
+  const dx = x - world.player.x;
+  const dy = y - world.player.y;
+  const d = Math.hypot(dx, dy);
+  if (d < 24) return { x: 0, y: 0, sting };
+  return { x: dx / d, y: dy / d, sting };
 }
 
 function playInput(world: ReturnType<typeof createWorld>, chapter: Chapter): SimInput {
-  const combat = ['ch3', 'ch4', 'ch5'].includes(chapter.id);
-  if (!combat) return seekShards(world, chapter.requiredShards);
-
-  let nearest = null as null | { x: number; y: number };
-  let bestDistance = Number.POSITIVE_INFINITY;
-  for (const enemy of world.enemies) {
-    if (!enemy.alive) continue;
-    const d = Math.hypot(enemy.x - world.player.x, enemy.y - world.player.y);
-    if (d < bestDistance) {
-      bestDistance = d;
-      nearest = enemy;
-    }
+  const sting = chapter.loadout.needle;
+  if (world.carried !== null) {
+    const spot = chapter.dropoffs.find((d) => d.id === 'window') ?? chapter.dropoffs[0];
+    if (spot) return seekPoint(world, spot.x, spot.y, sting);
   }
-  if (nearest && bestDistance <= 200) return kite(world);
-  return seekShards(world, chapter.requiredShards);
+  const escorting = world.shards.some((s) => s.escorting && !s.taken);
+  if (escorting && chapter.exits.length > 0) {
+    const exit = chapter.exits[0];
+    return seekPoint(world, exit.x, exit.y, sting);
+  }
+  const foe = nearestHarmful(world);
+  if (foe && foe.d <= 200) {
+    return {
+      x: (world.player.x - foe.x) / foe.d,
+      y: (world.player.y - foe.y) / foe.d,
+      sting
+    };
+  }
+  return seekShards(world, chapter.requiredShards, sting);
 }
 
 function playChapter(chapter: Chapter): { status: string; frames: number } {
@@ -77,6 +80,8 @@ function playChapter(chapter: Chapter): { status: string; frames: number } {
   placeWindZones(world, chapter.wind ?? []);
   placeSlowZones(world, chapter.slow ?? []);
   placeHazards(world, chapter.hazards ?? []);
+  placeDropoffs(world, chapter.dropoffs ?? []);
+  placeExits(world, chapter.exits ?? []);
   const director = createDirector(chapter.waves);
 
   const maxFrames = chapter.timeSeconds * 60 + 60;

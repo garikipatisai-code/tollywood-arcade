@@ -14,6 +14,9 @@ export interface WaveEvent {
   pattern: SpawnPattern;
   /** Optional per-wave hp override (finale bosses, wounded foes). */
   hp?: number;
+  harmless?: boolean;
+  marked?: boolean;
+  enraged?: boolean;
 }
 
 export interface Director {
@@ -87,7 +90,11 @@ export function stepDirector(world: World, director: Director): void {
 
     for (let i = 0; i < event.count + bonus; i++) {
       const spot = spawnSpot(world, event.pattern, i, event.kind);
-      const enemy = spawnEnemy(world, event.kind, spot.x, spot.y, spot.vx, spot.vy, event.hp);
+      const enemy = spawnEnemy(world, event.kind, spot.x, spot.y, spot.vx, spot.vy, event.hp, {
+        harmless: event.harmless,
+        marked: event.marked,
+        enraged: event.enraged
+      });
       if (enemy) director.spawned++;
       else director.dropped++;
     }

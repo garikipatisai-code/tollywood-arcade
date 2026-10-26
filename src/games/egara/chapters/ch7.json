@@ -8,6 +8,7 @@
   "minFrames": 0,
   "tint": 15740426,
   "requiredShards": ["shilpi"],
+  "exits": [{ "id": "window", "x": 480, "y": 120, "r": 30 }],
   "hazards": [
     { "id": "patrol-west", "x": -60, "y": 300, "r": 26, "vx": 90, "kind": "guard" },
     { "id": "patrol-east", "x": 1020, "y": 420, "r": 26, "vx": -110, "kind": "guard" }
@@ -17,5 +18,5 @@
     { "atSeconds": 25, "kind": "swatter", "count": 3, "pattern": "random" },
     { "atSeconds": 45, "kind": "spider", "count": 1, "pattern": "top" }
   ],
-  "shards": [{ "id": "shilpi", "x": 480, "y": 120 }]
+  "shards": [{ "id": "shilpi", "x": 480, "y": 400, "escort": true }]
 }

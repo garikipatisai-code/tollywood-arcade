@@ -10,10 +10,11 @@
     { "id": "breeze", "x": 480, "y": 250, "r": 220, "dx": 70, "dy": 0, "period": 300, "on": 180 }
   ],
   "requiredShards": ["petal-1", "petal-2", "petal-3"],
+  "dropoffs": [{ "id": "window", "x": 760, "y": 150, "r": 30 }],
   "waves": [],
   "shards": [
-    { "id": "petal-1", "x": 200, "y": 400 },
-    { "id": "petal-2", "x": 480, "y": 250 },
-    { "id": "petal-3", "x": 760, "y": 400 }
+    { "id": "petal-1", "x": 200, "y": 400, "carry": true },
+    { "id": "petal-2", "x": 480, "y": 250, "carry": true },
+    { "id": "petal-3", "x": 760, "y": 400, "carry": true }
   ]
 }

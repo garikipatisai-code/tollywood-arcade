@@ -14,7 +14,8 @@
   ],
   "waves": [
     { "atSeconds": 4, "kind": "spray", "count": 2, "pattern": "sides" },
-    { "atSeconds": 20, "kind": "swatter", "count": 3, "pattern": "random" }
+    { "atSeconds": 20, "kind": "swatter", "count": 3, "pattern": "random" },
+    { "atSeconds": 60, "kind": "boss", "count": 1, "pattern": "top", "hp": 3, "marked": true }
   ],
   "shards": [
     { "id": "feast-1", "x": 240, "y": 180 },

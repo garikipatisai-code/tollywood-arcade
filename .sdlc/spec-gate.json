@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "plan": "docs/plans/2026-10-26-screenplay.md",
+  "plan_sha256": "8a075899806e99b168c9b4b63ab012c6d1f77f1e9f85d39e3cedb77a7a54e623",
+  "spec": "docs/specs/2026-10-26-screenplay.md",
+  "spec_sha256": "89df15fb71d074f2781121fd583b9c9090bbe977a357a5b1cbc8f97bf24f6105",
+  "cli_sha256": "582b6b274b5d9b810f01d513a6791ab11541b89f2d25c5cc4a1a66737d1222d5",
+  "approved_by": "garikipatisai-code (blanket authorization: proceed without pausing)",
+  "approved_at": "2026-10-26T14:38:38Z",
+  "files": [
+    "src/engines/shooter/sim.ts",
+    "src/engines/shooter/director.ts",
+    "src/games/egara/content.ts",
+    "src/games/egara/chapters/*.json",
+    "src/games/egara/scenes/EgaraScene.ts",
+    "src/core/hud.ts",
+    "tests/unit/level-verbs*.spec.ts",
+    "tests/unit/chapters.spec.ts",
+    "tests/unit/story-bosses.spec.ts",
+    "docs/qa/perf.md"
+  ],
+  "allow": [
+    "docs/plans/2026-10-26-screenplay-progress.md",
+    "docs/debt-ledger.md"
+  ],
+  "created_at": "2026-10-26T14:46:43.071Z"
+}

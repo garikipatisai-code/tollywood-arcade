@@ -1,5 +1,5 @@
 import type { Director, SpawnPattern, WaveEvent } from '../../engines/shooter/director';
-import type { EnemyKind, Hazard, Loadout, SlowZone, Tuning, WindZone, World } from '../../engines/shooter/sim';
+import type { Dropoff, EnemyKind, ExitZone, Hazard, Loadout, SlowZone, Tuning, WindZone, World } from '../../engines/shooter/sim';
 import raw from './tuning.json';
 import ch1 from './chapters/ch1.json';
 import ch2 from './chapters/ch2.json';
@@ -33,6 +33,10 @@ export interface ChapterShard {
   id: string;
   x: number;
   y: number;
+  carry?: boolean;
+  fuse?: number;
+  escort?: boolean;
+  martyr?: boolean;
 }
 
 export interface Chapter {
@@ -53,6 +57,8 @@ export interface Chapter {
   hazards: Hazard[];
   wind: WindZone[];
   slow: SlowZone[];
+  dropoffs: Dropoff[];
+  exits: ExitZone[];
 }
 
 const ENEMY_KINDS: EnemyKind[] = ['swatter', 'spray', 'spider', 'boss'];
@@ -83,6 +89,8 @@ function toChapter(rawChapter: unknown): Chapter {
       (zone) => ({ period: 0, on: 0, ...zone })
     ),
     slow: (((c as Record<string, unknown>).slow ?? []) as SlowZone[]).map((zone) => ({ ...zone })),
+    dropoffs: (((c as Record<string, unknown>).dropoffs ?? []) as Dropoff[]).map((spot) => ({ ...spot, r: spot.r ?? 16 })),
+    exits: (((c as Record<string, unknown>).exits ?? []) as ExitZone[]).map((spot) => ({ ...spot, r: spot.r ?? 24 })),
     hazards: (
       ((c as Record<string, unknown>).hazards ?? []) as Omit<Hazard, 'period' | 'on' | 'vx' | 'vy' | 'kind'>[]
     ).map((hazard) => ({ period: 0, on: 0, vx: 0, vy: 0, kind: 'ring' as const, ...hazard }))
@@ -186,6 +194,17 @@ export function validateChapter(raw: unknown): string[] {
       continue;
     }
     shardIds.add(shard.id);
+    const verbs = [shard.carry, shard.escort, shard.martyr].filter(Boolean).length;
+    if (verbs > 1) errors.push(`shard ${shard.id} mixes carry/escort/martyr`);
+    if (shard.fuse !== undefined && (!Number.isInteger(shard.fuse) || shard.fuse < 30 || shard.fuse > 3600)) {
+      errors.push(`shard ${shard.id} needs a sane fuse`);
+    }
+    if (shard.carry && chapter.dropoffs.length === 0) {
+      errors.push(`carry shard ${shard.id} needs a dropoff`);
+    }
+    if (shard.escort && chapter.exits.length === 0) {
+      errors.push(`escort shard ${shard.id} needs an exit`);
+    }
   }
   for (const id of chapter.requiredShards ?? []) {
     if (!shardIds.has(id)) errors.push(`required shard ${id} is not placed`);
@@ -255,6 +274,15 @@ export function validateChapter(raw: unknown): string[] {
     }
   }
 
+  for (const spot of [...(chapter.dropoffs ?? []), ...(chapter.exits ?? [])]) {
+    if (!spot || typeof spot.id !== 'string' || !Number.isFinite(spot.x) || !Number.isFinite(spot.y)) {
+      errors.push('dropoffs/exits need id, x, y');
+    }
+    if (!spot || !Number.isFinite(spot.r) || spot.r <= 0 || spot.r > 200) {
+      errors.push(`spot ${spot?.id} needs a sane radius`);
+    }
+  }
+
   const budget = chapter.timeSeconds * 60;
   for (const wave of chapter.waves ?? []) {
     if (!wave || !ENEMY_KINDS.includes(wave.kind)) errors.push(`bad enemy kind ${wave?.kind}`);
@@ -267,6 +295,11 @@ export function validateChapter(raw: unknown): string[] {
       (!Number.isInteger(wave.hp) || wave.hp < 1 || wave.hp > 50)
     ) {
       errors.push('wave hp override must be 1-50');
+    }
+    for (const flag of ['harmless', 'marked', 'enraged'] as const) {
+      if (wave?.[flag] !== undefined && typeof wave[flag] !== 'boolean') {
+        errors.push(`wave ${flag} must be boolean`);
+      }
     }
     if (!wave || !Number.isFinite(wave.atSeconds) || wave.atSeconds < 0 || wave.atSeconds * 60 > budget) {
       errors.push(`wave at ${wave?.atSeconds}s exceeds the time budget`);
@@ -281,6 +314,9 @@ export type ChapterState = 'running' | 'complete';
 /** Pure completion predicate: time served, waves fired, skies clear, shards held. */
 export function chapterStatus(world: World, director: Director, chapter: Chapter): ChapterState {
   if (world.runFrames < chapter.minFrames) return 'running';
+  if (world.events.some((event) => event.type === 'martyr')) {
+    return world.enemies.some((enemy) => enemy.alive) ? 'running' : 'complete';
+  }
   if (chapter.escapeAfter !== undefined && world.runFrames >= chapter.escapeAfter) {
     return shardsHeld(world, chapter) ? 'complete' : 'running';
   }
