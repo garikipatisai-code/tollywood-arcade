@@ -9,6 +9,7 @@ export interface HudLabels {
   mute: string;
   unmute: string;
   story?: string;
+  chapters?: string;
   quality?: string;
   controls: string;
   change: string;
@@ -45,13 +46,15 @@ export interface Hud {
   onNext(handler: () => void): void;
   onQuality(handler: () => void): void;
   setQualityLabel(text: string): void;
+  showWelcome(title: string, ctaLabel: string, onCta: () => void): () => void;
   setObjective(text: string): void;
   flashBanner(text: string): void;
   showCutscene(panels: CutPanelView[], skipLabel: string, nextLabel: string, onDone: () => void): void;
   renderChapterSelect(
     model: ChapterSelectModel,
     onPick: (id: string) => void,
-    onNg: () => void
+    onNg: () => void,
+    onQuick?: () => void
   ): HTMLElement;
   onMute(handler: () => void): void;
 }
@@ -75,6 +78,7 @@ export interface ChapterSelectModel {
   ngLabel: string;
   ngActive: boolean;
   showNgToggle: boolean;
+  quickLabel: string;
   cards: ChapterCard[];
 }
 
@@ -158,7 +162,7 @@ export function createHud(labels: HudLabels): Hud {
 
   const storyLink = element('a', 'ta-button ta-button--ghost');
   storyLink.href = './?select=1';
-  storyLink.textContent = labels.story ?? 'Story';
+  storyLink.textContent = `☰ ${labels.chapters ?? 'Chapters'}`;
 
   actions.append(resume, retry, next, storyLink, back);
   menu.append(title, body, controls, actions);
@@ -335,7 +339,7 @@ export function createHud(labels: HudLabels): Hud {
       container.append(overlay);
       overlay.querySelector<HTMLButtonElement>('.ta-button:not(.ta-button--ghost)')?.focus();
     },
-    renderChapterSelect(model: ChapterSelectModel, onPick: (id: string) => void, onNg: () => void) {
+    renderChapterSelect(model: ChapterSelectModel, onPick: (id: string) => void, onNg: () => void, onQuick?: () => void) {
       const section = element('div', 'ta-menu');
       section.setAttribute('role', 'dialog');
       section.setAttribute('aria-label', model.title);
@@ -344,15 +348,27 @@ export function createHud(labels: HudLabels): Hud {
       heading.textContent = model.title;
 
       const list = element('ul', 'ta-controls__list');
+      if (onQuick) {
+        const quickItem = element('li', 'ta-controls__row');
+        const quick = element('button', 'ta-button');
+        quick.type = 'button';
+        quick.textContent = `▶ ${model.quickLabel}`;
+        quick.addEventListener('click', onQuick);
+        quickItem.append(quick);
+        list.append(quickItem);
+      }
       for (const card of model.cards) {
         const item = element('li', 'ta-controls__row');
         const pick = element('button', 'ta-button');
         pick.type = 'button';
         pick.disabled = card.locked;
         pick.dataset.chapter = card.id;
-        pick.textContent = card.locked
-          ? `${card.name} · ${model.lockedLabel}`
-          : `${card.name} — ${model.bestLabel}: ${card.best} · ${model.shardsLabel}: ${card.shardsTaken}/${card.shardsTotal}`;
+        if (card.locked) {
+          pick.style.opacity = '0.55';
+          pick.textContent = `🔒 ${card.name} · ${model.lockedLabel}`;
+        } else {
+          pick.textContent = `${card.name} — ${model.bestLabel}: ${card.best} · ${model.shardsLabel}: ${card.shardsTaken}/${card.shardsTotal}`;
+        }
         pick.title = card.goal;
         pick.addEventListener('click', () => onPick(card.id));
         item.append(pick);
@@ -387,6 +403,33 @@ export function createHud(labels: HudLabels): Hud {
     },
     setQualityLabel(text: string) {
       qualityButton.textContent = text;
+    },
+    showWelcome(title: string, ctaLabel: string, onCta: () => void) {
+      const box = element('div', 'ta-welcome');
+      box.style.cssText =
+        'position:absolute;left:50%;bottom:1rem;transform:translateX(-50%);' +
+        'display:flex;align-items:center;gap:.75rem;padding:.6rem 1rem;' +
+        'background:rgb(13 11 18 / 88%);border:1px solid #e8b04b;border-radius:.75rem;' +
+        'color:#f3ecdd;font:inherit;z-index:2;pointer-events:none;white-space:nowrap;';
+      const label = element('span', 'ta-welcome__title');
+      label.textContent = title;
+      const cta = element('button', 'ta-button');
+      cta.type = 'button';
+      cta.textContent = ctaLabel;
+      cta.style.pointerEvents = 'auto';
+      cta.addEventListener('click', onCta);
+      box.append(label, cta);
+
+      let gone = false;
+      const dismiss = () => {
+        if (gone) return;
+        gone = true;
+        box.remove();
+      };
+      const container = document.getElementById('game-container') ?? document.body;
+      container.append(box);
+      setTimeout(dismiss, 8000);
+      return dismiss;
     },
     setObjective(text: string) {
       objective.hidden = text.length === 0;

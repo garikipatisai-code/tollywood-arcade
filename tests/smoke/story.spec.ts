@@ -78,3 +78,38 @@ test('chapter opens with its comic cutscene', async ({ page }) => {
   await dialog.getByRole('button', { name: 'Skip' }).click();
   await expect(dialog).toContainText('Ordinary Skies');
 });
+
+test('fresh landing welcomes with a story door', async ({ page }) => {
+  await page.goto('./games/egara/');
+  const welcome = page.locator('.ta-welcome');
+  await expect(welcome).toContainText('New here?');
+  await welcome.getByRole('button', { name: 'Story →' }).click();
+  await expect(page).toHaveURL(/select=1/);
+  await expect(page.getByRole('dialog', { name: 'Story' })).toBeVisible();
+});
+
+test('select marks locked chapters and offers quick play', async ({ page }) => {
+  await page.goto('./games/egara/?select=1');
+  const dialog = page.getByRole('dialog', { name: 'Story' });
+  await expect(dialog.locator('button[data-chapter]')).toHaveCount(8);
+
+  const locked = dialog.locator('button[data-chapter="ch2"]');
+  await expect(locked).toBeDisabled();
+  await expect(locked).toContainText('🔒');
+  await expect(locked).toHaveCSS('opacity', '0.55');
+
+  await dialog.getByRole('button', { name: '▶ Quick Play' }).click();
+  await expect(page).not.toHaveURL(/select=1/);
+  await expect(page.locator('canvas')).toBeVisible();
+});
+
+test('pause menu leads home to chapters', async ({ page }) => {
+  await page.goto('./games/egara/');
+  await page.locator('canvas').click({ position: { x: 480, y: 300 } });
+  await page.keyboard.press('Escape');
+  const dialog = page.getByRole('dialog');
+  const home = dialog.getByRole('link', { name: '☰ Chapters' });
+  await expect(home).toHaveAttribute('href', './?select=1');
+  await home.click();
+  await expect(page).toHaveURL(/select=1/);
+});

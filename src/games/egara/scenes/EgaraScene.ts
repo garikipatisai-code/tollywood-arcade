@@ -289,6 +289,20 @@ export class EgaraScene extends Phaser.Scene {
       this.paused = true;
       this.hud.pauseButton.hidden = true;
       this.showSelect();
+    } else if (Object.keys(this.save.chapters).length === 0) {
+      const dismiss = this.hud.showWelcome(
+        translate(this.save.lang, 'welcome.title'),
+        `${translate(this.save.lang, 'story.select')} →`,
+        () => {
+          window.location.search = '?select=1';
+        }
+      );
+      const hide = () => {
+        dismiss();
+        window.removeEventListener('click', hide);
+      };
+      window.addEventListener('click', hide);
+      this.detach.push(() => window.removeEventListener('click', hide));
     }
   }
 
@@ -316,6 +330,7 @@ export class EgaraScene extends Phaser.Scene {
         ngLabel: translate(lang, 'story.ngplus'),
         ngActive,
         showNgToggle: this.save.amulet,
+        quickLabel: translate(lang, 'game.quickplay'),
         cards: CHAPTERS.map((chapter, index) => ({
           id: chapter.id,
           name: translate(lang, chapter.nameKey as MessageKey),
@@ -331,6 +346,9 @@ export class EgaraScene extends Phaser.Scene {
       },
       () => {
         window.location.search = ngActive ? '?select=1' : '?select=1&ng=1';
+      },
+      () => {
+        window.location.search = '';
       }
     );
   }
