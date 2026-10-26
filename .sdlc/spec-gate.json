@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "plan": "docs/plans/2026-10-26-ch2.md",
+  "plan_sha256": "4fedb0eec639c33e64d0573f5aa30158da9491ec025ad73915b7e4b14ebb7734",
+  "spec": "docs/specs/2026-10-26-ch2-rebirth.md",
+  "spec_sha256": "213bc89c17a0ba007d55636207bc4b047bf72e9eaf26202ae0ed82defd562a50",
+  "cli_sha256": "582b6b274b5d9b810f01d513a6791ab11541b89f2d25c5cc4a1a66737d1222d5",
+  "approved_by": "garikipatisai-code (blanket authorization: proceed without pausing)",
+  "approved_at": "2026-10-26T13:27:12Z",
+  "files": [
+    "src/render/world.ts",
+    "src/games/egara/chapters/ch2.json",
+    "tests/unit/chapters.spec.ts",
+    "docs/qa/perf.md"
+  ],
+  "allow": [
+    "docs/plans/2026-10-26-ch2-progress.md",
+    "docs/debt-ledger.md"
+  ],
+  "created_at": "2026-10-26T13:27:19.562Z"
+}

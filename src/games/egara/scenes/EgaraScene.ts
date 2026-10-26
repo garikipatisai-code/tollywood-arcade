@@ -248,6 +248,7 @@ export class EgaraScene extends Phaser.Scene {
 
     if (this.chapter) {
       this.world.runFramesMax = this.chapter.timeSeconds * 60;
+      this.worldView?.showWind(this.chapter.wind ?? []);
       this.paused = true;
       const cut = CUTSCENES.find((c) => c.id === this.chapter!.id);
       const base = `${import.meta.env.BASE_URL}assets/vendor/kenney`;

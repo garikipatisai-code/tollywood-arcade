@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createDirector, stepDirector } from '../../src/engines/shooter/director';
-import { createWorld, placeShards, setParanoia, stepWorld } from '../../src/engines/shooter/sim';
+import { createWorld, placeShards, placeWindZones, setParanoia, stepWorld } from '../../src/engines/shooter/sim';
 import {
   CHAPTERS,
   chapterStatus,
@@ -74,6 +74,7 @@ function playChapter(chapter: Chapter): { status: string; frames: number } {
   const world = createWorld(21, EGARA_TUNING, chapter.loadout);
   setParanoia(world, chapter.paranoia);
   placeShards(world, chapter.shards);
+  placeWindZones(world, chapter.wind ?? []);
   const director = createDirector(chapter.waves);
 
   const maxFrames = chapter.timeSeconds * 60 + 60;
@@ -125,6 +126,7 @@ describe('chapters 1-3', () => {
   it('ch2 collects 4 memory shards', () => {
     const ch2 = CHAPTERS[1];
     expect(ch2.requiredShards).toHaveLength(4);
+    expect(ch2.wind.filter((z) => z.dy < 0)).toHaveLength(2);
     const result = playChapter(ch2);
     expect(result.status).toBe('complete');
   });

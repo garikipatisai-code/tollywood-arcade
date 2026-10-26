@@ -26,6 +26,13 @@ export interface Shopfront {
   signBg: number;
 }
 
+export interface BookSpine {
+  x: number;
+  w: number;
+  h: number;
+  color: number;
+}
+
 export interface WorldTheme {
   skyTop: number;
   skyBottom: number;
@@ -44,6 +51,12 @@ export interface WorldTheme {
   swags?: { x0: number; y0: number; x1: number; y1: number }[];
   auto?: boolean;
   locketWindow?: { x: number; y: number };
+  books?: BookSpine[];
+  cupLake?: { x: number; y: number; rx: number; ry: number };
+  lamp?: { x: number; y: number };
+  nightWindow?: { x: number; y: number; w: number; h: number };
+  rain?: number;
+  locket?: { x: number; y: number; s: number };
 }
 
 const BERING = 0xffffff;
@@ -102,17 +115,31 @@ export const THEMES: Record<string, WorldTheme> = {
     locketWindow: { x: 760, y: 150 }
   },
   ch2: {
-    skyTop: 0x1d3a4e,
-    skyBottom: 0x4a8e8e,
-    ground: 0x14202e,
-    floorTint: 0x5a7a72,
+    skyTop: 0x0e1028,
+    skyBottom: 0x2a3a5e,
+    ground: 0x141020,
+    floorTint: 0x6e4a2e,
     grass: false,
-    trees: [{ tex: 'tree-4', x: 480, y: 320, scale: 3, tint: 0x2e6e66, alpha: 0.5 }],
+    trees: [],
     castles: false,
     props: [],
-    clouds: 3,
-    glows: [{ x: 480, y: 250, color: 0xa8e6e0, scale: 2 }],
-    torchAtGlows: false
+    clouds: 1,
+    glows: [
+      { x: 140, y: 130, color: 0xffd98b, scale: 2.6 },
+      { x: 760, y: 120, color: 0x6a8ac0, scale: 1.6 }
+    ],
+    torchAtGlows: false,
+    books: [
+      { x: 36, w: 46, h: 150, color: 0x8e2f4e },
+      { x: 86, w: 40, h: 120, color: 0x2e5e8e },
+      { x: 834, w: 44, h: 140, color: 0x4e7e2e },
+      { x: 882, w: 42, h: 110, color: 0x8e6e2e }
+    ],
+    cupLake: { x: 480, y: 472, rx: 120, ry: 26 },
+    lamp: { x: 140, y: 120 },
+    nightWindow: { x: 760, y: 120, w: 150, h: 130 },
+    rain: 40,
+    locket: { x: 480, y: 200, s: 2.2 }
   },
   ch3: {
     skyTop: 0x3e2a4e,
@@ -243,11 +270,14 @@ export function worldPreload(load: Phaser.Loader.LoaderPlugin): void {
   for (let i = 1; i <= 5; i++) load.image(`grass-${i}`, `bg/grass${i}.png`);
   load.image('glow-light', 'particles/light_01.png');
   load.image('glow-flame', 'particles/flame_01.png');
+  load.image('rain-drop', 'particles/trace_02.png');
 }
 
 export interface WorldView {
   update(dt: number): void;
   setGlows(on: boolean): void;
+  /** Soft decals marking wind zones so gusts read before they push. */
+  showWind(zones: { x: number; y: number; r: number }[]): void;
 }
 
 interface Drifter {
@@ -376,6 +406,69 @@ export function buildWorld(scene: Phaser.Scene, themeKey: string, opts: { glows?
     deco.fillTriangle(x - 14, y - 1, x + 14, y - 1, x, y + 14);
   }
 
+  if (theme.books) {
+    const floorTop = H - 64;
+    for (const book of theme.books) {
+      deco.fillStyle(0x100c18, 1);
+      deco.fillRect(book.x - 3, floorTop - book.h - 3, book.w + 6, book.h + 3);
+      deco.fillStyle(book.color, 1);
+      deco.fillRect(book.x, floorTop - book.h, book.w, book.h);
+      deco.fillStyle(0xf3ecdd, 0.85);
+      deco.fillRect(book.x + 5, floorTop - book.h + 10, book.w - 10, 8);
+      deco.fillStyle(0x100c18, 0.6);
+      deco.fillRect(book.x, floorTop - book.h, 4, book.h);
+    }
+  }
+
+  if (theme.cupLake) {
+    const cup = theme.cupLake;
+    deco.fillStyle(0xe8ded0, 1);
+    deco.fillEllipse(cup.x, cup.y, cup.rx * 2, cup.ry * 2);
+    deco.fillStyle(0x8e4e2e, 1);
+    deco.fillEllipse(cup.x, cup.y - 3, cup.rx * 1.7, cup.ry * 1.6);
+    deco.fillStyle(0xffffff, 0.5);
+    deco.fillEllipse(cup.x - cup.rx * 0.4, cup.y - 8, cup.rx * 0.5, 6);
+  }
+
+  if (theme.lamp) {
+    const lamp = theme.lamp;
+    deco.lineStyle(6, 0x2e2a38, 1);
+    deco.lineBetween(lamp.x - 40, 300, lamp.x, lamp.y + 20);
+    deco.fillStyle(0x2e2a38, 1);
+    deco.fillTriangle(lamp.x - 34, lamp.y - 8, lamp.x + 34, lamp.y - 8, lamp.x, lamp.y + 26);
+    deco.fillStyle(0xffd98b, 1);
+    deco.fillTriangle(lamp.x - 24, lamp.y - 4, lamp.x + 24, lamp.y - 4, lamp.x, lamp.y + 20);
+    deco.fillStyle(0xffd98b, 0.06);
+    deco.fillTriangle(lamp.x - 22, lamp.y + 20, lamp.x + 22, lamp.y + 20, lamp.x + 90, 470);
+    deco.fillTriangle(lamp.x - 22, lamp.y + 20, lamp.x + 22, lamp.y + 20, lamp.x - 90, 470);
+  }
+
+  if (theme.nightWindow) {
+    const win = theme.nightWindow;
+    deco.fillStyle(0x1d1430, 1);
+    deco.fillRect(win.x - win.w / 2 - 8, win.y - win.h / 2 - 8, win.w + 16, win.h + 16);
+    deco.fillStyle(0x0e1a3e, 1);
+    deco.fillRect(win.x - win.w / 2, win.y - win.h / 2, win.w, win.h);
+    deco.fillStyle(0xf3ecdd, 0.95);
+    deco.fillCircle(win.x + win.w / 4, win.y - win.h / 4, 10);
+    deco.fillStyle(0x0e1a3e, 1);
+    deco.fillCircle(win.x + win.w / 4 + 4, win.y - win.h / 4 - 4, 8);
+    deco.lineStyle(5, 0x1d1430, 1);
+    deco.lineBetween(win.x, win.y - win.h / 2, win.x, win.y + win.h / 2);
+    deco.lineBetween(win.x - win.w / 2, win.y, win.x + win.w / 2, win.y);
+  }
+
+  if (theme.locket) {
+    const lock = theme.locket;
+    const s = lock.s;
+    deco.fillStyle(0xe05a7a, 1);
+    deco.fillCircle(lock.x - 6 * s, lock.y - 6 * s, 9 * s);
+    deco.fillCircle(lock.x + 6 * s, lock.y - 6 * s, 9 * s);
+    deco.fillTriangle(lock.x - 14 * s, lock.y - s, lock.x + 14 * s, lock.y - s, lock.x, lock.y + 14 * s);
+    deco.fillStyle(0xffffff, 0.55);
+    deco.fillCircle(lock.x - 9 * s, lock.y - 9 * s, 3 * s);
+  }
+
   for (let i = 0; i < 15; i++) {
     scene.add
       .image(i * 64 + 32, H - 32, SAND_TILES[i % SAND_TILES.length])
@@ -465,6 +558,29 @@ export function buildWorld(scene: Phaser.Scene, themeKey: string, opts: { glows?
     for (const flicker of flickers) flicker.obj.setVisible(on);
   };
   setGlows(opts.glows ?? true);
+  const windLayer = scene.add.graphics().setDepth(-6);
+  const showWind = (zones: { x: number; y: number; r: number }[]) => {
+    windLayer.clear();
+    for (const zone of zones) {
+      windLayer.fillStyle(0xa8e6e0, 0.07);
+      windLayer.fillEllipse(zone.x, zone.y, zone.r * 2, zone.r * 2);
+      windLayer.fillStyle(0xa8e6e0, 0.1);
+      windLayer.fillEllipse(zone.x, zone.y, zone.r * 1.2, zone.r * 1.2);
+    }
+  };
+  const rain: { obj: Phaser.GameObjects.Image; speed: number }[] = [];
+  if (theme.rain) {
+    for (let i = 0; i < theme.rain; i++) {
+      const drop = scene.add
+        .image(Phaser.Math.Between(0, W), Phaser.Math.Between(-H, H), 'rain-drop')
+        .setScale(0.8)
+        .setAlpha(0.45)
+        .setTint(0x8ab8d8)
+        .setRotation(-0.12)
+        .setDepth(-5);
+      rain.push({ obj: drop, speed: 480 + (i % 5) * 40 });
+    }
+  }
   return {
     update(dt: number): void {
       time += dt;
@@ -473,11 +589,20 @@ export function buildWorld(scene: Phaser.Scene, themeKey: string, opts: { glows?
         if (x > drifter.maxX) x = drifter.minX;
         drifter.obj.setX(x);
       }
+      for (const drop of rain) {
+        let y = drop.obj.y + drop.speed * dt;
+        if (y > H + 20) {
+          y = -20;
+          drop.obj.setX(Phaser.Math.Between(0, W));
+        }
+        drop.obj.setY(y);
+      }
       for (const flicker of flickers) {
         if (!flicker.obj.visible) continue;
         flicker.obj.setAlpha(flicker.base + Math.sin(time * flicker.speed + flicker.phase) * 0.18);
       }
     },
-    setGlows
+    setGlows,
+    showWind
   };
 }

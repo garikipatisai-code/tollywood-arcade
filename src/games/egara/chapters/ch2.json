@@ -6,6 +6,10 @@
   "loadout": { "needle": false, "armor": false, "cannon": false },
   "timeSeconds": 75,
   "minFrames": 900,
+  "wind": [
+    { "id": "updraft-west", "x": 150, "y": 300, "r": 150, "dx": 0, "dy": -110 },
+    { "id": "updraft-east", "x": 810, "y": 300, "r": 150, "dx": 0, "dy": -110 }
+  ],
   "requiredShards": ["memory-1", "memory-2", "memory-3", "memory-4"],
   "waves": [],
   "shards": [
