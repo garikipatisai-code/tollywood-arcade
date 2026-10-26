@@ -16,6 +16,16 @@ export interface Prop {
   alpha?: number;
 }
 
+export interface Shopfront {
+  x: number;
+  w: number;
+  wall: number;
+  awningA: number;
+  awningB: number;
+  sign: string;
+  signBg: number;
+}
+
 export interface WorldTheme {
   skyTop: number;
   skyBottom: number;
@@ -28,6 +38,12 @@ export interface WorldTheme {
   clouds: number;
   glows: GlowSpot[];
   torchAtGlows: boolean;
+  shops?: Shopfront[];
+  wires?: { x0: number; y0: number; x1: number; y1: number; sag: number }[];
+  crows?: { x: number; y: number }[];
+  swags?: { x0: number; y0: number; x1: number; y1: number }[];
+  auto?: boolean;
+  locketWindow?: { x: number; y: number };
 }
 
 const BERING = 0xffffff;
@@ -54,7 +70,7 @@ export const THEMES: Record<string, WorldTheme> = {
   },
   ch1: {
     skyTop: 0x3a5a9e,
-    skyBottom: 0xa8d8f0,
+    skyBottom: 0xe8a860,
     ground: 0x2a4a2e,
     floorTint: 0xd8b078,
     grass: true,
@@ -67,7 +83,23 @@ export const THEMES: Record<string, WorldTheme> = {
     props: [],
     clouds: 5,
     glows: [{ x: 480, y: 110, color: 0xfff2b0, scale: 2.6 }],
-    torchAtGlows: false
+    torchAtGlows: false,
+    shops: [
+      { x: 20, w: 290, wall: 0x2e8e8e, awningA: 0xe8b04b, awningB: 0xf3ecdd, sign: 'పూలు', signBg: 0x8e2f2f },
+      { x: 330, w: 300, wall: 0xd8d0b8, awningA: 0x2e8e8e, awningB: 0xf3ecdd, sign: 'టీ స్టాల్', signBg: 0x2e4a2e },
+      { x: 650, w: 290, wall: 0xb86e4e, awningA: 0x8e2f2f, awningB: 0xf3ecdd, sign: 'కిరాణా', signBg: 0x2e2a3e }
+    ],
+    wires: [
+      { x0: 0, y0: 60, x1: 480, y1: 90, sag: 26 },
+      { x0: 480, y0: 90, x1: 960, y1: 55, sag: 30 }
+    ],
+    crows: [{ x: 200, y: 78 }, { x: 640, y: 92 }, { x: 830, y: 68 }],
+    swags: [
+      { x0: 60, y0: 150, x1: 330, y1: 150 },
+      { x0: 630, y0: 150, x1: 900, y1: 150 }
+    ],
+    auto: true,
+    locketWindow: { x: 760, y: 150 }
   },
   ch2: {
     skyTop: 0x1d3a4e,
@@ -258,6 +290,92 @@ export function buildWorld(scene: Phaser.Scene, themeKey: string, opts: { glows?
     scene.add.image(810, 340, 'castle-beige').setScale(2.4).setTint(0x1a2040).setAlpha(0.9).setDepth(-9);
   }
 
+  const deco = scene.add.graphics().setDepth(-9);
+  if (theme.shops) {
+    for (const shop of theme.shops) {
+      deco.fillStyle(shop.wall, 1);
+      deco.fillRect(shop.x, 120, shop.w, 150);
+      deco.fillStyle(0x1d1430, 1);
+      deco.fillRect(shop.x, 262, shop.w, 8);
+      const stripes = 10;
+      for (let i = 0; i < stripes; i++) {
+        deco.fillStyle(i % 2 === 0 ? shop.awningA : shop.awningB, 1);
+        const sx = shop.x + (shop.w / stripes) * i;
+        deco.fillTriangle(sx, 118, sx + shop.w / stripes, 118, sx + shop.w / stripes / 2, 152);
+      }
+      deco.fillStyle(shop.signBg, 1);
+      deco.fillRect(shop.x + 24, 168, shop.w - 48, 46);
+      deco.lineStyle(2, 0xf3ecdd, 0.8);
+      deco.strokeRect(shop.x + 24, 168, shop.w - 48, 46);
+      scene.add
+        .text(shop.x + shop.w / 2, 191, shop.sign, {
+          fontFamily: '"Noto Sans Telugu", "Noto Sans", system-ui, sans-serif',
+          fontSize: '26px',
+          color: '#f3ecdd'
+        })
+        .setOrigin(0.5)
+        .setDepth(-9);
+      deco.fillStyle(0x241a20, 1);
+      deco.fillRect(shop.x + shop.w / 2 - 26, 222, 52, 48);
+      deco.fillStyle(0xffd98b, 0.9);
+      deco.fillRect(shop.x + 30, 226, 44, 34);
+      deco.fillRect(shop.x + shop.w - 74, 226, 44, 34);
+    }
+  }
+
+  if (theme.wires) {
+    deco.lineStyle(2, 0x14101c, 1);
+    for (const wire of theme.wires) {
+      let prevX = wire.x0;
+      let prevY = wire.y0;
+      for (let i = 1; i <= 16; i++) {
+        const t = i / 16;
+        const x = wire.x0 + (wire.x1 - wire.x0) * t;
+        const y = wire.y0 + (wire.y1 - wire.y0) * t + wire.sag * 4 * t * (1 - t);
+        deco.lineBetween(prevX, prevY, x, y);
+        prevX = x;
+        prevY = y;
+      }
+    }
+  }
+
+  if (theme.crows) {
+    deco.fillStyle(0x14101c, 1);
+    for (const crow of theme.crows) {
+      deco.fillEllipse(crow.x, crow.y, 16, 10);
+      deco.fillCircle(crow.x + 8, crow.y - 3, 5);
+      deco.fillTriangle(crow.x + 12, crow.y - 4, crow.x + 17, crow.y - 2, crow.x + 12, crow.y);
+      deco.fillTriangle(crow.x - 8, crow.y, crow.x - 14, crow.y - 5, crow.x - 13, crow.y + 1);
+    }
+  }
+
+  if (theme.swags) {
+    for (const swag of theme.swags) {
+      for (let i = 0; i <= 24; i++) {
+        const t = i / 24;
+        const x = swag.x0 + (swag.x1 - swag.x0) * t;
+        const y = swag.y0 + (swag.y1 - swag.y0) * t + 26 * 4 * t * (1 - t);
+        deco.fillStyle(i % 2 === 0 ? 0xe07b39 : 0xffd94d, 1);
+        deco.fillCircle(x, y, 4);
+      }
+    }
+  }
+
+  if (theme.locketWindow) {
+    const { x, y } = theme.locketWindow;
+    deco.fillStyle(0x2e1a2e, 1);
+    deco.fillRect(x - 34, y - 44, 68, 88);
+    deco.fillStyle(0xffd98b, 1);
+    deco.fillRect(x - 26, y - 36, 52, 72);
+    deco.lineStyle(4, 0x2e1a2e, 1);
+    deco.lineBetween(x, y - 36, x, y + 36);
+    deco.lineBetween(x - 26, y, x + 26, y);
+    deco.fillStyle(0xe05a7a, 1);
+    deco.fillCircle(x - 6, y - 6, 9);
+    deco.fillCircle(x + 6, y - 6, 9);
+    deco.fillTriangle(x - 14, y - 1, x + 14, y - 1, x, y + 14);
+  }
+
   for (let i = 0; i < 15; i++) {
     scene.add
       .image(i * 64 + 32, H - 32, SAND_TILES[i % SAND_TILES.length])
@@ -292,6 +410,35 @@ export function buildWorld(scene: Phaser.Scene, themeKey: string, opts: { glows?
       .setAlpha(0.7)
       .setDepth(-6);
     drifters.push({ obj: cloud, speed: 5 + (i % 3) * 4, minX: -160, maxX: W + 160 });
+  }
+
+  if (theme.auto) {
+    if (!scene.textures.exists('auto-rickshaw')) {
+      const g = scene.add.graphics();
+      g.fillStyle(0x14101c, 1);
+      g.fillCircle(28, 56, 10);
+      g.fillCircle(92, 56, 10);
+      g.fillCircle(60, 58, 8);
+      g.fillStyle(0x1d1d28, 1);
+      g.fillRect(14, 26, 92, 28);
+      g.fillStyle(0xe8b93d, 1);
+      g.fillRect(14, 40, 92, 14);
+      g.fillStyle(0x24242e, 1);
+      g.fillRect(20, 8, 80, 20);
+      g.fillStyle(0xe8b93d, 1);
+      g.fillRect(20, 8, 80, 6);
+      g.fillStyle(0xffd98b, 0.9);
+      g.fillRect(78, 14, 22, 16);
+      g.fillStyle(0x14101c, 1);
+      g.fillCircle(52, 22, 8);
+      g.fillRect(44, 28, 16, 14);
+      g.fillStyle(0xfff2b0, 1);
+      g.fillCircle(108, 42, 4);
+      g.generateTexture('auto-rickshaw', 120, 70);
+      g.destroy();
+    }
+    const auto = scene.add.image(-220, 452, 'auto-rickshaw').setScale(2).setDepth(-7);
+    drifters.push({ obj: auto, speed: 70, minX: -220, maxX: W + 220 });
   }
 
   const flickers: Flicker[] = [];

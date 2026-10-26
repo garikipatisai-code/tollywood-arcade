@@ -6,6 +6,9 @@
   "loadout": { "needle": false, "armor": false, "cannon": false },
   "timeSeconds": 60,
   "minFrames": 900,
+  "wind": [
+    { "id": "breeze", "x": 480, "y": 250, "r": 220, "dx": 70, "dy": 0, "period": 300, "on": 180 }
+  ],
   "requiredShards": ["petal-1", "petal-2", "petal-3"],
   "waves": [],
   "shards": [

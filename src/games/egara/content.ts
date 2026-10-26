@@ -1,5 +1,5 @@
 import type { Director, SpawnPattern, WaveEvent } from '../../engines/shooter/director';
-import type { EnemyKind, Hazard, Loadout, Tuning, World } from '../../engines/shooter/sim';
+import type { EnemyKind, Hazard, Loadout, Tuning, WindZone, World } from '../../engines/shooter/sim';
 import raw from './tuning.json';
 import ch1 from './chapters/ch1.json';
 import ch2 from './chapters/ch2.json';
@@ -51,6 +51,7 @@ export interface Chapter {
   waves: WaveEvent[];
   shards: ChapterShard[];
   hazards: Hazard[];
+  wind: WindZone[];
 }
 
 const ENEMY_KINDS: EnemyKind[] = ['swatter', 'spray', 'spider', 'boss'];
@@ -77,6 +78,9 @@ function toChapter(rawChapter: unknown): Chapter {
     requiredShards: ((c as Record<string, unknown>).requiredShards ?? []) as string[],
     waves: ((c as Record<string, unknown>).waves ?? []) as WaveEvent[],
     shards: ((c as Record<string, unknown>).shards ?? []) as ChapterShard[],
+    wind: (((c as Record<string, unknown>).wind ?? []) as Omit<WindZone, 'period' | 'on'>[]).map(
+      (zone) => ({ period: 0, on: 0, ...zone })
+    ),
     hazards: (((c as Record<string, unknown>).hazards ?? []) as Omit<Hazard, 'period' | 'on'>[]).map(
       (hazard) => ({ period: 0, on: 0, ...hazard })
     )
@@ -210,6 +214,18 @@ export function validateChapter(raw: unknown): string[] {
     }
     if (!hazard || !Number.isFinite(hazard.period) || hazard.period < 0 || !Number.isFinite(hazard.on) || hazard.on < 0) {
       errors.push(`hazard ${hazard?.id} needs a valid blink cycle`);
+    }
+  }
+
+  for (const zone of chapter.wind ?? []) {
+    if (!zone || typeof zone.id !== 'string' || !Number.isFinite(zone.x) || !Number.isFinite(zone.y)) {
+      errors.push('wind zones need id, x, y');
+    }
+    if (!zone || !Number.isFinite(zone.r) || zone.r <= 0 || zone.r > 600) {
+      errors.push(`wind ${zone?.id} needs a sane radius`);
+    }
+    if (!zone || !Number.isFinite(zone.dx) || !Number.isFinite(zone.dy) || Math.hypot(zone.dx, zone.dy) > 400) {
+      errors.push(`wind ${zone?.id} needs a sane force`);
     }
   }
 

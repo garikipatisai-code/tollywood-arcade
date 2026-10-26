@@ -110,6 +110,18 @@ export interface Hazard {
   on: number;
 }
 
+export interface WindZone {
+  id: string;
+  x: number;
+  y: number;
+  r: number;
+  /** Push velocity in px/s while active. */
+  dx: number;
+  dy: number;
+  period: number;
+  on: number;
+}
+
 export interface World {
   tuning: Tuning;
   seed: number;
@@ -125,6 +137,7 @@ export interface World {
   slowmoFrames: number;
   shards: Shard[];
   hazards: Hazard[];
+  wind: WindZone[];
   /** Scored shard slots (base 2, +1 with the wing amulet). */
   shardSlots: number;
   shardsUsed: number;
@@ -171,6 +184,7 @@ export function createWorld(seed: number, tuning: Tuning, loadout: Loadout = DEF
     slowmoFrames: 0,
     shards: [],
     hazards: [],
+    wind: [],
     shardSlots: 0,
     shardsUsed: 0,
     events: [],
@@ -215,6 +229,14 @@ export function placeHazards(
 export function hazardActive(hazard: Pick<Hazard, 'period' | 'on'>, tick: number): boolean {
   if (hazard.period <= 0) return true;
   return tick % hazard.period < hazard.on;
+}
+
+/** Wind gusts: blink-active push fields. Placed per chapter. */
+export function placeWindZones(
+  world: World,
+  zones: { id: string; x: number; y: number; r: number; dx: number; dy: number; period?: number; on?: number }[]
+): void {
+  world.wind = zones.map((zone) => ({ period: 0, on: 0, ...zone }));
 }
 /** Deterministic PRNG. State lives in the world so a replay can reproduce it. */
 export function nextRandom(world: World): number {
@@ -293,6 +315,15 @@ function fixToArray(world: World, input: SimInput): void {
 
   player.x = clamp(player.x + input.x * tuning.player.speed * STEP, radius, tuning.width - radius);
   player.y = clamp(player.y + input.y * tuning.player.speed * STEP, radius, tuning.height - radius);
+
+  for (const zone of world.wind) {
+    if (!hazardActive(zone, world.tick)) continue;
+    const dx = player.x - zone.x;
+    const dy = player.y - zone.y;
+    if (dx * dx + dy * dy > zone.r * zone.r) continue;
+    player.x = clamp(player.x + zone.dx * STEP, radius, tuning.width - radius);
+    player.y = clamp(player.y + zone.dy * STEP, radius, tuning.height - radius);
+  }
 
   if (player.invulnFrames > 0) player.invulnFrames--;
   if (player.cooldownFrames > 0) player.cooldownFrames--;

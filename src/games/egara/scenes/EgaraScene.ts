@@ -42,6 +42,7 @@ import {
   hazardActive,
   placeHazards,
   placeShards,
+  placeWindZones,
   setParanoia,
   setShardSlots,
   stepWorld,
@@ -145,6 +146,7 @@ export class EgaraScene extends Phaser.Scene {
       setParanoia(this.world, this.chapter.paranoia);
       placeShards(this.world, this.chapter.shards);
       placeHazards(this.world, this.chapter.hazards ?? []);
+      placeWindZones(this.world, this.chapter.wind ?? []);
       setShardSlots(this.world, BASE_SHARD_SLOTS + (this.ngplus ? 1 : 0));
       this.director = createDirector(this.chapter.waves);
     } else {
