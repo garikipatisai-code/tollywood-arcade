@@ -32,6 +32,7 @@ npm run assets   # per-game assets ≤5 MiB, licences present
 | Build | Device | CPU | Min FPS | Avg FPS | LCP | INP | Notes |
 |---|---|---|---|---|---|---|---|
 | v1.0 | — | — | — | — | — | — | pending device run |
+| v2.0 | — | — | — | — | — | — | hub 1.3 KB gz, egara 356 KB gz, assets 122.5 KiB; device run still pending |
 
 Automated numbers are not a substitute for the manual row; leave it blank until
 the device run happens.
