@@ -45,6 +45,7 @@ npm run assets   # per-game assets ≤5 MiB, licences present
 | v4-screenplay | — | — | — | — | — | — | 8 verbs playable; HUD objectives; 123/123; live 200 |
 | v4.1-launch | — | — | — | — | — | — | welcome toast, honest locks, quick play, chapters menus; live 200 |
 | v4.2-duel | — | — | — | — | — | — | needle-duel reenactment; 129/129; live 200 |
+| v4.3-crash | — | — | — | — | — | — | airport crash reenactment; 132/132; live 200 |
 
 Automated numbers are not a substitute for the manual row; leave it blank until
 the device run happens.
