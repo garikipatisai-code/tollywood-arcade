@@ -16,6 +16,13 @@ export const KNOCKBACK = 0.02;
 
 export type EnemyKind = 'swatter' | 'spray' | 'spider' | 'boss';
 export type Outcome = 'running' | 'won' | 'lost';
+export type DuelMode = 'stalk' | 'windup' | 'dash' | 'recover';
+
+export const DUEL_STALK = 120;
+export const DUEL_WINDUP = 40;
+export const DUEL_DASH = 20;
+export const DUEL_RECOVER = 70;
+export const DUEL_DASH_MULT = 4;
 
 export interface SimInput {
   x: number;
@@ -56,6 +63,11 @@ export interface Enemy {
   marked: boolean;
   enraged: boolean;
   burnCd: number;
+  duelist: boolean;
+  mode: DuelMode;
+  modeT: number;
+  maxHp: number;
+  winged: boolean;
 }
 
 export interface Bullet {
@@ -88,7 +100,7 @@ export const FULL_LOADOUT: Loadout = { needle: true, armor: true, cannon: true }
 /** v1 behavior exactly: sting only, no armor, no piercing. */
 export const DEFAULT_LOADOUT: Loadout = { needle: true, armor: false, cannon: false };
 
-export type SimEventType = 'shard' | 'objective' | 'carry' | 'deliver' | 'detonate' | 'slain' | 'martyr';
+export type SimEventType = 'shard' | 'objective' | 'carry' | 'deliver' | 'detonate' | 'slain' | 'martyr' | 'winged';
 
 export interface SimEvent {
   tick: number;
@@ -176,8 +188,8 @@ export interface World {
   loadout: Loadout;
   armorSpent: boolean;
   slowmoFrames: number;
-  shards: Shard[];
-  hazards: Hazard[];
+  clipped: boolean;
+  shards: Shard[];  hazards: Hazard[];
   wind: WindZone[];
   slow: SlowZone[];
   dropoffs: Dropoff[];
@@ -210,7 +222,12 @@ function emptyEnemy(): Enemy {
     harmless: false,
     marked: false,
     enraged: false,
-    burnCd: 0
+    burnCd: 0,
+    duelist: false,
+    mode: 'stalk',
+    modeT: 0,
+    maxHp: 0,
+    winged: false
   };
 }
 
@@ -232,6 +249,7 @@ export function createWorld(seed: number, tuning: Tuning, loadout: Loadout = DEF
     loadout: { ...loadout },
     armorSpent: false,
     slowmoFrames: 0,
+    clipped: false,
     shards: [],
     hazards: [],
     wind: [],
@@ -361,7 +379,7 @@ export function spawnEnemy(
   vx = 0,
   vy = 0,
   hp?: number,
-  flags?: { harmless?: boolean; marked?: boolean; enraged?: boolean }
+  flags?: { harmless?: boolean; marked?: boolean; enraged?: boolean; duelist?: boolean }
 ): Enemy | null {
   const slot = world.enemies.find((enemy) => !enemy.alive);
   if (!slot) return null;
@@ -380,6 +398,11 @@ export function spawnEnemy(
   slot.marked = flags?.marked ?? false;
   slot.enraged = flags?.enraged ?? false;
   slot.burnCd = 0;
+  slot.duelist = flags?.duelist ?? false;
+  slot.mode = 'stalk';
+  slot.modeT = DUEL_STALK;
+  slot.maxHp = slot.hp;
+  slot.winged = false;
   return slot;
 }
 
@@ -432,7 +455,7 @@ function fixToArray(world: World, input: SimInput): void {
     grip = Math.min(grip, zone.factor);
   }
 
-  const pace = tuning.player.speed * (1 + SWIFT_STEP * Math.min(world.swift, SWIFT_CAP));
+  const pace = tuning.player.speed * (1 + SWIFT_STEP * Math.min(world.swift, SWIFT_CAP)) * (world.clipped ? 0.75 : 1);
   player.x = clamp(player.x + input.x * pace * grip * STEP, radius, tuning.width - radius);
   player.y = clamp(player.y + input.y * pace * grip * STEP, radius, tuning.height - radius);
 
@@ -489,6 +512,11 @@ function stepEnemies(world: World): void {
     if (!enemy.alive) continue;
     if (enemy.burnCd > 0) enemy.burnCd--;
 
+    if (enemy.duelist) {
+      duelStep(world, enemy);
+      continue;
+    }
+
     enemy.x += enemy.vx * STEP;
     enemy.y += enemy.vy * STEP;
 
@@ -518,7 +546,7 @@ function collide(world: World): void {
       if (dx * dx + dy * dy > reach * reach) continue;
 
       if (!bullet.pierce) bullet.alive = false;
-      enemy.hp -= tuning.bullet.damage;
+      enemy.hp -= enemy.mode === 'recover' ? tuning.bullet.damage * 2 : tuning.bullet.damage;
       enemy.vx += bullet.vx * KNOCKBACK;
       enemy.vy += bullet.vy * KNOCKBACK;
       if (enemy.enraged && enemy.hp > 0) {
@@ -535,6 +563,10 @@ function collide(world: World): void {
         if (enemy.marked) {
           world.events.push({ tick: world.tick, type: 'slain', id: enemy.kind });
         }
+      } else if (enemy.duelist && !enemy.winged && enemy.hp <= enemy.maxHp / 2) {
+        enemy.winged = true;
+        world.clipped = true;
+        world.events.push({ tick: world.tick, type: 'winged', id: enemy.kind });
       }
       break;
     }
@@ -714,6 +746,63 @@ function hurtPlayer(world: World): void {
   player.invulnFrames = tuning.player.invulnFrames;
 }
 
+/** Needle-duel brain: stalk, telegraph, dash, recover. Pure timers. */
+function duelStep(world: World, enemy: Enemy): void {
+  const speed = world.tuning.enemies[enemy.kind].speed;
+  enemy.modeT--;
+
+  if (enemy.mode === 'stalk') {
+    const dx = world.player.x - enemy.x;
+    const dy = world.player.y - enemy.y;
+    const d = Math.hypot(dx, dy) || 1;
+    enemy.vx = (dx / d) * speed;
+    enemy.vy = (dy / d) * speed;
+    enemy.x += enemy.vx * STEP;
+    enemy.y += enemy.vy * STEP;
+    if (enemy.modeT <= 0) {
+      enemy.mode = 'windup';
+      enemy.modeT = DUEL_WINDUP;
+      enemy.vx = 0;
+      enemy.vy = 0;
+    }
+    return;
+  }
+
+  if (enemy.mode === 'windup') {
+    if (enemy.modeT <= 0) {
+      const dx = world.player.x - enemy.x;
+      const dy = world.player.y - enemy.y;
+      const d = Math.hypot(dx, dy) || 1;
+      enemy.vx = (dx / d) * speed * DUEL_DASH_MULT;
+      enemy.vy = (dy / d) * speed * DUEL_DASH_MULT;
+      enemy.mode = 'dash';
+      enemy.modeT = DUEL_DASH;
+    }
+    return;
+  }
+
+  if (enemy.mode === 'dash') {
+    enemy.x += enemy.vx * STEP;
+    enemy.y += enemy.vy * STEP;
+    if (enemy.modeT <= 0) {
+      enemy.vx *= 0.2;
+      enemy.vy *= 0.2;
+      enemy.mode = 'recover';
+      enemy.modeT = DUEL_RECOVER;
+    }
+    return;
+  }
+
+  enemy.vx *= 0.95;
+  enemy.vy *= 0.95;
+  enemy.x += enemy.vx * STEP;
+  enemy.y += enemy.vy * STEP;
+  if (enemy.modeT <= 0) {
+    enemy.mode = 'stalk';
+    enemy.modeT = DUEL_STALK;
+  }
+}
+
 function stepHazards(world: World): void {
   const spanX = world.tuning.width + 200;
   const spanY = world.tuning.height + 200;
@@ -824,6 +913,7 @@ export function hashWorld(world: World): string {
 
   for (const enemy of world.enemies) {
     parts.push(enemy.alive ? 1 : 0, KIND_ORDER.indexOf(enemy.kind), q(enemy.x), q(enemy.y), enemy.hp);
+    parts.push(enemy.mode === 'stalk' ? 0 : enemy.mode === 'windup' ? 1 : enemy.mode === 'dash' ? 2 : 3, enemy.modeT);
   }
   for (const bullet of world.bullets) {
     parts.push(
@@ -835,6 +925,7 @@ export function hashWorld(world: World): string {
     );
   }
   parts.push(world.paranoia, world.armorSpent ? 1 : 0, world.slowmoFrames, world.shardSlots, world.shardsUsed, world.events.length);
+  parts.push(world.clipped ? 1 : 0);
   parts.push(world.swift, world.carried ? world.carried.length : 0);
   if (world.carried) {
     for (const char of world.carried) parts.push(char.charCodeAt(0));

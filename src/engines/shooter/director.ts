@@ -17,6 +17,9 @@ export interface WaveEvent {
   harmless?: boolean;
   marked?: boolean;
   enraged?: boolean;
+  duelist?: boolean;
+  /** Fire only after this shard id is taken (duel entrances go last). */
+  after?: string;
 }
 
 export interface Director {
@@ -83,6 +86,7 @@ export function stepDirector(world: World, director: Director): void {
   while (director.nextIndex < director.events.length) {
     const event = director.events[director.nextIndex];
     if (world.runFrames < Math.round(event.atSeconds * 60)) break;
+    if (event.after && !world.shards.find((s) => s.id === event.after)?.taken) break;
 
     const waveIndex = director.nextIndex;
     director.nextIndex++;
@@ -93,7 +97,8 @@ export function stepDirector(world: World, director: Director): void {
       const enemy = spawnEnemy(world, event.kind, spot.x, spot.y, spot.vx, spot.vy, event.hp, {
         harmless: event.harmless,
         marked: event.marked,
-        enraged: event.enraged
+        enraged: event.enraged,
+        duelist: event.duelist
       });
       if (enemy) director.spawned++;
       else director.dropped++;

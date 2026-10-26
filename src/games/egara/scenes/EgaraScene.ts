@@ -123,6 +123,7 @@ export class EgaraScene extends Phaser.Scene {
   private autoQuality = true;
   private emaFps = 60;
   private memGb: number | undefined;
+  private duelAnnounced = false;
   private prevHp: number[] = [];
   private popUntil: number[] = [];
 
@@ -163,6 +164,7 @@ export class EgaraScene extends Phaser.Scene {
     this.paused = false;
     this.ended = false;
     this.bossSeen = false;
+    this.duelAnnounced = false;
     this.chapterDone = false;
     this.frames = 0;
 
@@ -668,8 +670,25 @@ export class EgaraScene extends Phaser.Scene {
     for (const event of fresh) {
       if (event.type === 'shard') this.audio.play('shard');
       else if (event.type === 'slain') this.hud.flashBanner(`${event.id.toUpperCase()} DESTROYED`);
+      else if (event.type === 'winged') {
+        this.hud.flashBanner('WING CLIPPED!');
+        this.hitStop.trigger(30);
+      }
     }
     this.hud.setObjective(this.chapter ? this.objectiveText() : '');
+
+    const duelist = this.world.enemies.find((enemy) => enemy.alive && enemy.duelist);
+    if (duelist) {
+      const name = duelist.kind === 'boss' ? 'GARVA' : duelist.kind.toUpperCase();
+      this.hud.setBoss(name, duelist.hp / Math.max(1, duelist.maxHp));
+      if (!this.duelAnnounced) {
+        this.duelAnnounced = true;
+        this.fx?.bossIntro();
+        this.hud.flashBanner(`${name} APPROACHES`);
+      }
+    } else {
+      this.hud.hideBoss();
+    }
   }
 
   private objectiveText(): string {

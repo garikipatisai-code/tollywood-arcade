@@ -285,8 +285,7 @@ export function validateChapter(raw: unknown): string[] {
 
   const budget = chapter.timeSeconds * 60;
   for (const wave of chapter.waves ?? []) {
-    if (!wave || !ENEMY_KINDS.includes(wave.kind)) errors.push(`bad enemy kind ${wave?.kind}`);
-    if (!wave || !PATTERNS.includes(wave.pattern)) errors.push(`bad pattern ${wave?.pattern}`);
+    if (!wave || !ENEMY_KINDS.includes(wave.kind)) errors.push(`bad enemy kind ${wave?.kind}`);    if (!wave || !PATTERNS.includes(wave.pattern)) errors.push(`bad pattern ${wave?.pattern}`);
     if (!wave || !Number.isFinite(wave.count) || wave.count < 1 || wave.count > 8) {
       errors.push('wave count must be 1-8');
     }
@@ -296,14 +295,26 @@ export function validateChapter(raw: unknown): string[] {
     ) {
       errors.push('wave hp override must be 1-50');
     }
-    for (const flag of ['harmless', 'marked', 'enraged'] as const) {
+    for (const flag of ['harmless', 'marked', 'enraged', 'duelist'] as const) {
       if (wave?.[flag] !== undefined && typeof wave[flag] !== 'boolean') {
         errors.push(`wave ${flag} must be boolean`);
+      }
+    }
+    if (wave?.after !== undefined) {
+      if (typeof wave.after !== 'string' || !wave.after) {
+        errors.push('wave after must be a shard id');
+      } else if (!shardIds.has(wave.after)) {
+        errors.push(`wave after ${wave.after} is not a placed shard`);
       }
     }
     if (!wave || !Number.isFinite(wave.atSeconds) || wave.atSeconds < 0 || wave.atSeconds * 60 > budget) {
       errors.push(`wave at ${wave?.atSeconds}s exceeds the time budget`);
     }
+  }
+
+  const gated = (chapter.waves ?? []).findIndex((wave) => wave?.after !== undefined);
+  if (gated >= 0 && gated !== (chapter.waves ?? []).length - 1) {
+    errors.push('a gated wave must come last');
   }
 
   return errors;

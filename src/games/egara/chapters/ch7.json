@@ -16,7 +16,8 @@
   "waves": [
     { "atSeconds": 5, "kind": "spray", "count": 2, "pattern": "sides" },
     { "atSeconds": 25, "kind": "swatter", "count": 3, "pattern": "random" },
-    { "atSeconds": 45, "kind": "spider", "count": 1, "pattern": "top" }
+    { "atSeconds": 45, "kind": "spider", "count": 1, "pattern": "top" },
+    { "atSeconds": 10, "kind": "boss", "count": 1, "pattern": "top", "hp": 6, "duelist": true, "marked": true, "after": "shilpi" }
   ],
   "shards": [{ "id": "shilpi", "x": 480, "y": 400, "escort": true }]
 }

@@ -49,6 +49,8 @@ export interface Hud {
   showWelcome(title: string, ctaLabel: string, onCta: () => void): () => void;
   setObjective(text: string): void;
   flashBanner(text: string): void;
+  setBoss(name: string, frac: number): void;
+  hideBoss(): void;
   showCutscene(panels: CutPanelView[], skipLabel: string, nextLabel: string, onDone: () => void): void;
   renderChapterSelect(
     model: ChapterSelectModel,
@@ -175,7 +177,25 @@ export function createHud(labels: HudLabels): Hud {
 
   const banner = element('div', 'ta-hud__banner');
   banner.setAttribute('role', 'status');
-  banner.style.cssText =
+
+  const bossWrap = element('div', 'ta-hud__boss');
+  bossWrap.style.cssText =
+    'position:absolute;top:5.4rem;left:50%;transform:translateX(-50%);width:min(420px,70vw);' +
+    'pointer-events:none;text-align:center;';
+  bossWrap.hidden = true;
+  const bossName = element('div', 'ta-hud__boss-name');
+  bossName.style.cssText =
+    'font-family:ui-monospace,monospace;font-size:.8rem;letter-spacing:.2em;color:#ffb0a0;' +
+    'text-shadow:0 1px 2px #000;margin-bottom:2px;';
+  const bossTrack = element('div', 'ta-hud__boss-track');
+  bossTrack.style.cssText =
+    'height:10px;border:1px solid #8e2f2f;border-radius:5px;background:rgb(13 11 18 / 70%);overflow:hidden;';
+  const bossFill = element('div', 'ta-hud__boss-fill');
+  bossFill.style.cssText =
+    'height:100%;width:100%;background:linear-gradient(90deg,#d05a5a,#e07b39);' +
+    'transition:width .2s;';
+  bossTrack.append(bossFill);
+  bossWrap.append(bossName, bossTrack);  banner.style.cssText =
     'position:absolute;top:38%;left:50%;transform:translate(-50%,-50%) scale(.9);' +
     'font-size:clamp(1.2rem,4vw,2rem);font-weight:800;color:#ffd94d;' +
     'text-shadow:0 2px 0 #000,0 0 24px #e07b39;opacity:0;pointer-events:none;' +
@@ -183,7 +203,7 @@ export function createHud(labels: HudLabels): Hud {
   let bannerTimer: ReturnType<typeof setTimeout> | undefined;
 
   root.append(stats, hudActions);
-  root.append(objective, banner);
+  root.append(objective, banner, bossWrap);
 
   const container = document.getElementById('game-container') ?? document.body;
   container.append(root, menu);
@@ -444,6 +464,14 @@ export function createHud(labels: HudLabels): Hud {
         banner.style.opacity = '0';
         banner.style.transform = 'translate(-50%,-50%) scale(.9)';
       }, 1600);
+    },
+    setBoss(name: string, frac: number) {
+      bossWrap.hidden = false;
+      bossName.textContent = name;
+      bossFill.style.width = `${Math.max(0, Math.min(1, frac)) * 100}%`;
+    },
+    hideBoss() {
+      bossWrap.hidden = true;
     }
   };
 }

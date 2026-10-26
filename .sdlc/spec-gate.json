@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "plan": "docs/plans/2026-10-26-duel.md",
+  "plan_sha256": "2082a39926d5ed65efb9a0b296df66770a4a4fb39152db96fbf6af10ba908224",
+  "spec": "docs/specs/2026-10-26-duel.md",
+  "spec_sha256": "1b65d9faa16bebd8fcb1867fdfab47f632126e4bea7ff28cb80cf3f27b92b0a2",
+  "cli_sha256": "582b6b274b5d9b810f01d513a6791ab11541b89f2d25c5cc4a1a66737d1222d5",
+  "approved_by": "garikipatisai-code (blanket authorization + \"go ahead\" on recommended path)",
+  "approved_at": "2026-10-26T15:13:28Z",
+  "files": [
+    "src/engines/shooter/sim.ts",
+    "src/engines/shooter/director.ts",
+    "src/games/egara/content.ts",
+    "src/games/egara/chapters/ch7.json",
+    "src/games/egara/scenes/EgaraScene.ts",
+    "src/core/hud.ts",
+    "tests/unit/level-duel.spec.ts",
+    "tests/unit/chapters.spec.ts",
+    "tests/unit/story-bosses.spec.ts",
+    "docs/qa/perf.md"
+  ],
+  "allow": [
+    "docs/plans/2026-10-26-duel-progress.md",
+    "docs/debt-ledger.md"
+  ],
+  "created_at": "2026-10-26T15:13:40.781Z"
+}
