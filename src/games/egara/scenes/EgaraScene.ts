@@ -65,6 +65,8 @@ const CHAPTER_UNLOCKS: Record<string, (keyof Loadout)[]> = {
   ch8: ['cannon']
 };
 
+const SCENE_NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+
 const CHAPTER_GRADES: Record<string, string> = {
   ch1: 'saturate(1.15)',
   ch2: 'saturate(1.1) hue-rotate(10deg)',
@@ -124,6 +126,8 @@ export class EgaraScene extends Phaser.Scene {
   private emaFps = 60;
   private memGb: number | undefined;
   private duelAnnounced = false;
+  private crashShown = false;
+  private crackG: Phaser.GameObjects.Graphics | null = null;
   private prevHp: number[] = [];
   private popUntil: number[] = [];
 
@@ -174,6 +178,8 @@ export class EgaraScene extends Phaser.Scene {
 
     this.cameras.main.setBackgroundColor(COLORS.bg);
     this.graphics = this.add.graphics();
+    this.crackG = this.add.graphics().setDepth(4);
+    this.crackG.setVisible(false);
     this.tier = initialTier();
     this.autoQuality = true;
     this.emaFps = 60;
@@ -267,8 +273,9 @@ export class EgaraScene extends Phaser.Scene {
       const cut = CUTSCENES.find((c) => c.id === this.chapter!.id);
       const base = `${import.meta.env.BASE_URL}assets/vendor/kenney`;
       const briefing = () => {
+        const numeral = SCENE_NUMERALS[CHAPTERS.findIndex((c) => c.id === this.chapter!.id)] ?? '';
         this.hud.showMenu(
-          translate(this.save.lang, this.chapter!.nameKey as MessageKey),
+          numeral ? `SCENE ${numeral} — ${translate(this.save.lang, this.chapter!.nameKey as MessageKey)}` : translate(this.save.lang, this.chapter!.nameKey as MessageKey),
           translate(this.save.lang, this.chapter!.goalKey as MessageKey),
           true
         );
@@ -465,6 +472,13 @@ export class EgaraScene extends Phaser.Scene {
     if (this.chapter && !this.ended && !this.chapterDone && this.frames % 30 === 0) {
       if (chapterStatus(this.world, this.director, this.chapter) === 'complete') {
         this.onChapterComplete();
+      }
+      if (this.chapter.id === 'ch4' && !this.crashShown) {
+        const eye = this.world.shards.find((s) => s.id === 'eye');
+        if (eye?.taken) {
+          this.crashShown = true;
+          this.showCrash();
+        }
       }
     }
     this.checkEnd();
@@ -695,6 +709,18 @@ export class EgaraScene extends Phaser.Scene {
     const chapter = this.chapter;
     if (!chapter) return '';
     const goal = translate(this.save.lang, chapter.goalKey as MessageKey);
+    if (chapter.id === 'ch4') {
+      const eye = this.world.shards.find((s) => s.id === 'eye');
+      if (eye && !eye.taken) {
+        const darts = this.world.events.filter((e) => e.type === 'shard' && e.id === 'eye').length;
+        return `${goal} → dart! (${darts}/3)`;
+      }
+      const word = 'THREAT'.split('').map((letter, i) => {
+        const taken = this.world.shards.find((s) => s.id === `l${i + 1}`)?.taken;
+        return taken ? letter : '·';
+      }).join('');
+      return `${goal} → ${word}`;
+    }
     const total = chapter.requiredShards.length;
     if (total === 0) return goal;
     const done = chapter.requiredShards.filter((id) =>
@@ -755,12 +781,15 @@ export class EgaraScene extends Phaser.Scene {
     this.world.shards.forEach((shard, index) => {
       if (shard.taken) return;
       const carried = this.world.carried === shard.id;
+      const flag = this.chapter?.shards.find((cs) => cs.id === shard.id);
+      const locked =
+        !!flag?.lockedBy && !this.world.shards.find((s) => s.id === flag.lockedBy)?.taken;
       const bob = Math.sin((this.frames + index * 17) / 20) * 3;
       const sx = carried ? lerp(this.prevPlayer.x, this.world.player.x, blend) : shard.x;
       const sy = carried ? lerp(this.prevPlayer.y, this.world.player.y, blend) - 22 : shard.y + bob;
-      g.fillStyle(carried ? 0xfff6d8 : 0xe8b04b, 1);
+      g.fillStyle(carried ? 0xfff6d8 : 0xe8b04b, locked ? 0.35 : 1);
       g.fillCircle(sx + ox, sy + oy, carried ? 5 : 7);
-      g.fillStyle(carried ? 0xe8b04b : 0xfff6d8, 1);
+      g.fillStyle(carried ? 0xe8b04b : 0xfff6d8, locked ? 0.35 : 1);
       g.fillCircle(sx + ox, sy + oy, carried ? 2.5 : 3);
     });
 
@@ -869,7 +898,38 @@ export class EgaraScene extends Phaser.Scene {
     g.fillCircle(x + 24 * s * dir, y - 6 * s, 3 * s);
   }
 
-  private teardown(): void {    this.stopCapture();
+  private showCrash(): void {
+    this.cameras.main.flash(320, 255, 210, 160);
+    this.cameras.main.shake(600, 0.01);
+    this.shake.add(0.7);
+    this.hitStop.trigger(18);
+    this.audio.play('boss');
+    this.fx?.killBurst(480, 330, true);
+    this.fx?.killBurst(380, 360, false);
+    this.fx?.killBurst(580, 360, false);
+    this.hud.flashBanner('CRASH!');
+
+    const g = this.crackG;
+    if (g) {
+      g.setVisible(true);
+      g.lineStyle(3, 0xf3ecdd, 0.85);
+      const cx = 480;
+      const cy = 300;
+      g.strokeCircle(cx, cy, 16);
+      const rays: [number, number][] = [
+        [0, -1], [0.7, -0.7], [1, 0], [0.7, 0.7],
+        [0, 1], [-0.7, 0.7], [-1, 0], [-0.7, -0.7]
+      ];
+      rays.forEach(([dx, dy], i) => {
+        const len = 46 + (i % 3) * 22;
+        g.lineBetween(cx, cy, cx + dx * len, cy + dy * len);
+        g.lineBetween(cx + dx * len * 0.6, cy + dy * len * 0.6, cx + dx * len * 0.6 - dy * 14, cy + dy * len * 0.6 + dx * 14);
+      });
+    }
+  }
+
+  private teardown(): void {
+    this.stopCapture();
     this.audio.stopLoop();
     this.music?.stop();
     this.game.canvas.style.filter = '';

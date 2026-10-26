@@ -55,6 +55,7 @@ export interface WorldTheme {
   highway?: boolean;
   mansion?: boolean;
   finale?: boolean;
+  heroCar?: { x: number; y: number };
   sanctum?: boolean;
   ash?: number;
   nets?: { x: number; w: number; h: number }[];
@@ -190,7 +191,8 @@ export const THEMES: Record<string, WorldTheme> = {
       { x: 800, y: 290, color: 0xfff2cc, scale: 2.2 }
     ],
     torchAtGlows: false,
-    highway: true
+    highway: true,
+    heroCar: { x: 300, y: 335 }
   },
   ch5: {
     skyTop: 0x1e3e1e,
@@ -774,7 +776,7 @@ export function buildWorld(scene: Phaser.Scene, themeKey: string, opts: { glows?
     });
   }
 
-  if (theme.highway) {    // City-glow horizon + asphalt with lane dashes.    // City-glow horizon + asphalt with lane dashes.
+  if (theme.highway) {    // City-glow horizon + asphalt with lane dashes.
     deco.fillStyle(0xe08a4e, 0.22);
     deco.fillRect(0, 250, 960, 50);
     deco.fillStyle(0x1d1d28, 1);
@@ -821,6 +823,35 @@ export function buildWorld(scene: Phaser.Scene, themeKey: string, opts: { glows?
       })
       .setOrigin(0.5)
       .setDepth(-9);
+  }
+
+  if (theme.heroCar) {
+    const hx = theme.heroCar.x;
+    const hy = theme.heroCar.y;
+    // Headlight beams cutting the dark.
+    deco.fillStyle(0xfff2b0, 0.22);
+    deco.fillTriangle(hx + 60, hy - 10, hx + 60, hy + 10, hx + 230, hy - 36);
+    deco.fillTriangle(hx + 60, hy - 10, hx + 60, hy + 10, hx + 230, hy + 32);
+    // Parked sedan, driver window open at the eye.
+    deco.fillStyle(0x141420, 1);
+    deco.fillCircle(hx - 70, hy + 22, 13);
+    deco.fillCircle(hx + 70, hy + 22, 13);
+    deco.fillStyle(0x5a6a8e, 1);
+    deco.fillRoundedRect(hx - 95, hy - 30, 190, 52, 14);
+    deco.lineStyle(3, 0xb0c0d8, 1);
+    deco.strokeRoundedRect(hx - 95, hy - 30, 190, 52, 14);
+    deco.fillStyle(0x2e3e5e, 1);
+    deco.fillRoundedRect(hx - 85, hy - 24, 170, 30, 10);
+    deco.fillStyle(0x0e0e18, 1);
+    deco.fillRoundedRect(hx - 30, hy - 22, 60, 26, 6);
+    deco.fillStyle(0x9fd8f0, 0.9);
+    deco.fillRoundedRect(hx - 26, hy - 20, 24, 22, 4);
+    deco.fillStyle(0x8a5a3a, 1);
+    deco.fillCircle(hx - 8, hy - 8, 8);
+    deco.fillStyle(0xfff2b0, 1);
+    deco.fillCircle(hx + 92, hy - 6, 5);
+    deco.fillStyle(0xd05a5a, 1);
+    deco.fillCircle(hx - 92, hy - 6, 4);
   }
 
   if (theme.workshop) {

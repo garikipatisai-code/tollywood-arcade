@@ -124,6 +124,11 @@ export interface Shard {
   martyr: boolean;
   fuseLeft: number;
   escorting: boolean;
+  /** Retakes before the final take (eye darts). */
+  respawns: number;
+  respawnCd: number;
+  /** Overlap ignored until this shard id is taken. */
+  lockedBy?: string;
 }
 
 export interface Dropoff {
@@ -290,6 +295,8 @@ export function placeShards(
     fuse?: number;
     escort?: boolean;
     martyr?: boolean;
+    respawns?: number;
+    lockedBy?: string;
   }[]
 ): void {
   world.shards = shards.map((shard) => ({
@@ -301,8 +308,19 @@ export function placeShards(
     r: shard.r ?? 10,
     taken: false,
     fuseLeft: -1,
-    escorting: false
+    escorting: false,
+    respawns: shard.respawns ?? 0,
+    respawnCd: 0
   }));
+}
+
+export const RESPAWN_DELAY = 90;
+
+function stepRespawns(world: World): void {
+  for (const shard of world.shards) {
+    if (shard.taken || shard.respawnCd <= 0) continue;
+    shard.respawnCd--;
+  }
 }
 
 export function placeExits(world: World, spots: { id: string; x: number; y: number; r?: number }[]): void {
@@ -630,11 +648,19 @@ function collide(world: World): void {
 
   if (player.alive) {
     for (const shard of world.shards) {
-      if (shard.taken) continue;
+      if (shard.taken || shard.respawnCd > 0) continue;
+      if (shard.lockedBy && !world.shards.find((s) => s.id === shard.lockedBy)?.taken) continue;
       const dx = player.x - shard.x;
       const dy = player.y - shard.y;
       const reach = tuning.player.radius + shard.r;
       if (dx * dx + dy * dy > reach * reach) continue;
+
+      if (shard.respawns > 0) {
+        shard.respawns--;
+        shard.respawnCd = RESPAWN_DELAY;
+        world.events.push({ tick: world.tick, type: 'shard', id: shard.id });
+        continue;
+      }
 
       if (shard.martyr) {
         detonateMartyr(world, shard);
@@ -821,6 +847,7 @@ export const ESCORT_SPEED = 200;
 
 function stepShards(world: World): void {  for (const shard of world.shards) {
     if (shard.taken) continue;
+    if (shard.lockedBy && !world.shards.find((s) => s.id === shard.lockedBy)?.taken) continue;
     if (shard.escorting) {
       const dx = world.player.x - shard.x;
       const dy = world.player.y - shard.y;
@@ -863,6 +890,7 @@ export function stepWorld(world: World, input: SimInput): void {
   stepHazards(world);
   stepShards(world);
   stepFuses(world);
+  stepRespawns(world);
   collide(world);
 
   world.runFrames++;
@@ -932,6 +960,7 @@ export function hashWorld(world: World): string {
   }
   for (const shard of world.shards) {
     parts.push(shard.taken ? 1 : 0, shard.fuseLeft, shard.escorting ? 1 : 0);
+    parts.push(shard.respawns, shard.respawnCd);
   }
   for (const enemy of world.enemies) {
     parts.push(enemy.burnCd);

@@ -13,10 +13,21 @@
         background: radial-gradient(ellipse at center, transparent 52%, rgba(5, 3, 10, 0.5) 100%);
         z-index: 1;
       }
+      .ta-bar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 34px;
+        background: #000;
+        z-index: 1;
+        pointer-events: none;
+      }
+      .ta-bar--top { top: 0; }
+      .ta-bar--bottom { bottom: 0; }
     </style>
   </head>
   <body>
-    <div id="game-container"><div id="vignette" aria-hidden="true"></div></div>
+    <div id="game-container"><div id="vignette" aria-hidden="true"></div><div class="ta-bar ta-bar--top" aria-hidden="true"></div><div class="ta-bar ta-bar--bottom" aria-hidden="true"></div></div>
     <script type="module" src="../../src/games/egara/main.ts"></script>
   </body>
 </html>

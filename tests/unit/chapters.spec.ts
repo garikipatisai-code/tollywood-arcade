@@ -13,7 +13,12 @@ import { EGARA_TUNING } from '../../src/games/egara/content';
 const idle: SimInput = { x: 0, y: 0, sting: false };
 
 function seekShards(world: ReturnType<typeof createWorld>, required: string[], sting = true): SimInput {
-  const open = world.shards.filter((s) => !s.taken && required.includes(s.id));
+  const open = world.shards.filter(
+    (s) =>
+      !s.taken &&
+      (required.includes(s.id) || s.respawns > 0 || s.respawnCd > 0) &&
+      (!s.lockedBy || world.shards.find((t) => t.id === s.lockedBy)?.taken)
+  );
   if (open.length === 0) return { x: 0, y: 0, sting };
 
   let best = open[0];
@@ -160,7 +165,7 @@ describe('chapters 4-5', () => {  it('ch4 debuts the paranoia meter with sabotag
     const ch4 = CHAPTERS[3];
     expect(ch4.paranoia).toBe(40);
     expect(ch4.loadout.needle).toBe(true);
-    expect(ch4.requiredShards).toHaveLength(2);
+    expect(ch4.requiredShards).toEqual(['l1', 'l2', 'l3', 'l4', 'l5', 'l6']);
     expect(ch4.hazards.filter((h) => h.kind === 'car')).toHaveLength(3);
     const result = playChapter(ch4);
     expect(result.status).toBe('complete');

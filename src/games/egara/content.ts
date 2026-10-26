@@ -37,6 +37,8 @@ export interface ChapterShard {
   fuse?: number;
   escort?: boolean;
   martyr?: boolean;
+  respawns?: number;
+  lockedBy?: string;
 }
 
 export interface Chapter {
@@ -198,6 +200,27 @@ export function validateChapter(raw: unknown): string[] {
     if (verbs > 1) errors.push(`shard ${shard.id} mixes carry/escort/martyr`);
     if (shard.fuse !== undefined && (!Number.isInteger(shard.fuse) || shard.fuse < 30 || shard.fuse > 3600)) {
       errors.push(`shard ${shard.id} needs a sane fuse`);
+    }
+    if (shard.respawns !== undefined && (!Number.isInteger(shard.respawns) || shard.respawns < 0 || shard.respawns > 9)) {
+      errors.push(`shard ${shard.id} needs sane respawns`);
+    }
+    if (shard.lockedBy !== undefined) {
+      if (typeof shard.lockedBy !== 'string' || !shard.lockedBy) {
+        errors.push(`shard ${shard.id} needs a shard id lock`);
+      } else if (!shardIds.has(shard.lockedBy) && !(chapter.shards ?? []).some((s) => s.id === shard.lockedBy)) {
+        errors.push(`shard ${shard.id} locks behind missing ${shard.lockedBy}`);
+      } else {
+        const seen = new Set<string>([shard.id]);
+        let cursor: string | undefined = shard.lockedBy;
+        while (cursor) {
+          if (seen.has(cursor)) {
+            errors.push(`shard ${shard.id} sits in a lock cycle`);
+            break;
+          }
+          seen.add(cursor);
+          cursor = (chapter.shards ?? []).find((s) => s.id === cursor)?.lockedBy;
+        }
+      }
     }
     if (shard.carry && chapter.dropoffs.length === 0) {
       errors.push(`carry shard ${shard.id} needs a dropoff`);

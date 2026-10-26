@@ -4,9 +4,9 @@
   "goalKey": "story.ch4.goal",
   "paranoia": 40,
   "loadout": { "needle": true, "armor": false, "cannon": false },
-  "timeSeconds": 90,
+  "timeSeconds": 110,
   "minFrames": 0,
-  "requiredShards": ["feast-1", "feast-2"],
+  "requiredShards": ["l1", "l2", "l3", "l4", "l5", "l6"],
   "hazards": [
     { "id": "car-1", "x": -60, "y": 360, "r": 34, "vx": 130, "kind": "car" },
     { "id": "car-2", "x": 1020, "y": 430, "r": 34, "vx": -160, "kind": "car" },
@@ -14,11 +14,15 @@
   ],
   "waves": [
     { "atSeconds": 4, "kind": "spray", "count": 2, "pattern": "sides" },
-    { "atSeconds": 20, "kind": "swatter", "count": 3, "pattern": "random" },
-    { "atSeconds": 60, "kind": "boss", "count": 1, "pattern": "top", "hp": 3, "marked": true }
+    { "atSeconds": 20, "kind": "swatter", "count": 3, "pattern": "random" }
   ],
   "shards": [
-    { "id": "feast-1", "x": 240, "y": 180 },
-    { "id": "feast-2", "x": 720, "y": 180 }
+    { "id": "eye", "x": 300, "y": 300, "respawns": 2 },
+    { "id": "l1", "x": 300, "y": 180, "lockedBy": "eye" },
+    { "id": "l2", "x": 372, "y": 165, "lockedBy": "l1" },
+    { "id": "l3", "x": 444, "y": 158, "lockedBy": "l2" },
+    { "id": "l4", "x": 516, "y": 158, "lockedBy": "l3" },
+    { "id": "l5", "x": 588, "y": 165, "lockedBy": "l4" },
+    { "id": "l6", "x": 660, "y": 180, "lockedBy": "l5" }
   ]
 }
