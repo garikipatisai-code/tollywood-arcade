@@ -53,6 +53,8 @@ export interface WorldTheme {
   locketWindow?: { x: number; y: number };
   workshop?: boolean;
   highway?: boolean;
+  sanctum?: boolean;
+  ash?: number;
   nets?: { x: number; w: number; h: number }[];
   coils?: { x: number; y: number }[];
   vaporizers?: { x: number; y: number }[];
@@ -239,9 +241,15 @@ export const THEMES: Record<string, WorldTheme> = {
     clouds: 2,
     glows: [
       { x: 240, y: 270, color: 0xb06aff, scale: 2.6 },
-      { x: 720, y: 270, color: 0xb06aff, scale: 2.6 }
+      { x: 720, y: 270, color: 0xb06aff, scale: 2.6 },
+      { x: 340, y: 330, color: 0xffb060, scale: 1.1 },
+      { x: 620, y: 330, color: 0xffb060, scale: 1.1 },
+      { x: 340, y: 470, color: 0xffb060, scale: 1.1 },
+      { x: 620, y: 470, color: 0xffb060, scale: 1.1 }
     ],
-    torchAtGlows: true
+    torchAtGlows: true,
+    sanctum: true,
+    ash: 8
   },
   ch7: {
     skyTop: 0x0e1438,
@@ -297,6 +305,7 @@ export function worldPreload(load: Phaser.Loader.LoaderPlugin): void {
   load.image('glow-light', 'particles/light_01.png');
   load.image('glow-flame', 'particles/flame_01.png');
   load.image('rain-drop', 'particles/trace_02.png');
+  load.image('ash-puff', 'particles/smoke_01.png');
 }
 
 export interface WorldView {
@@ -565,6 +574,62 @@ export function buildWorld(scene: Phaser.Scene, themeKey: string, opts: { glows?
       .setDepth(-9);
   }
 
+  if (theme.sanctum) {
+    const cx = 480;
+    const cy = 400;
+    // Kalam rangoli: black base, five powder colors.
+    deco.fillStyle(0x0e0a14, 1);
+    deco.fillCircle(cx, cy, 120);
+    deco.lineStyle(4, 0xf3ecdd, 1);
+    deco.strokeCircle(cx, cy, 112);
+    deco.lineStyle(5, 0xd05a5a, 1);
+    deco.strokeCircle(cx, cy, 92);
+    deco.lineStyle(5, 0xe8b93d, 1);
+    deco.strokeCircle(cx, cy, 72);
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const px = cx + Math.cos(angle) * 52;
+      const py = cy + Math.sin(angle) * 52;
+      deco.fillStyle(i % 2 === 0 ? 0x4e9e4e : 0xf3ecdd, 1);
+      deco.fillEllipse(px, py, 30, 16);
+    }
+    deco.fillStyle(0xe8b93d, 1);
+    deco.fillCircle(cx, cy, 14);
+    // Corner diyas.
+    for (const [dx, dy] of [[340, 330], [620, 330], [340, 470], [620, 470]] as const) {
+      deco.fillStyle(0x8a5a30, 1);
+      deco.fillEllipse(dx, dy, 26, 12);
+      deco.fillStyle(0xe07b39, 1);
+      deco.fillEllipse(dx, dy - 8, 10, 12);
+      deco.fillStyle(0xffd94d, 1);
+      deco.fillEllipse(dx, dy - 10, 5, 7);
+    }
+    // Banana-leaf offering trays.
+    for (const ox of [150, 810]) {
+      deco.fillStyle(0x2e7e2e, 1);
+      deco.fillRoundedRect(ox - 55, 452, 110, 30, 8);
+      deco.fillStyle(0x8a5a30, 1);
+      deco.fillCircle(ox - 28, 462, 11);
+      deco.fillStyle(0xe8d94d, 1);
+      deco.fillEllipse(ox + 8, 464, 34, 12);
+      deco.fillStyle(0x8e2f2f, 1);
+      deco.fillRect(ox + 30, 456, 16, 16);
+    }
+    // Robed silhouette with fire bowl.
+    deco.fillStyle(0x0e0a14, 1);
+    deco.fillTriangle(440, 190, 520, 190, 480, 60);
+    deco.fillCircle(480, 52, 16);
+    deco.fillTriangle(468, 62, 492, 62, 480, 84);
+    deco.fillStyle(0x8e2f2f, 1);
+    for (let i = 0; i < 5; i++) deco.fillCircle(468 + i * 6, 120 + (i % 2) * 8, 2.5);
+    deco.fillStyle(0x3e2a1e, 1);
+    deco.fillEllipse(540, 130, 44, 18);
+    deco.fillStyle(0xe07b39, 1);
+    deco.fillEllipse(540, 120, 26, 18);
+    deco.fillStyle(0xffd94d, 1);
+    deco.fillEllipse(540, 116, 12, 10);
+  }
+
   if (theme.highway) {    // City-glow horizon + asphalt with lane dashes.    // City-glow horizon + asphalt with lane dashes.
     deco.fillStyle(0xe08a4e, 0.22);
     deco.fillRect(0, 250, 960, 50);
@@ -817,6 +882,17 @@ export function buildWorld(scene: Phaser.Scene, themeKey: string, opts: { glows?
         .setRotation(-0.12)
         .setDepth(-5);
       rain.push({ obj: drop, speed: 480 + (i % 5) * 40 });
+    }
+  }
+  if (theme.ash) {
+    for (let i = 0; i < theme.ash; i++) {
+      const puff = scene.add
+        .image(Phaser.Math.Between(0, W), Phaser.Math.Between(0, H), 'ash-puff')
+        .setScale(0.9 + (i % 3) * 0.3)
+        .setAlpha(0.28)
+        .setTint(0xb0a0c0)
+        .setDepth(-5);
+      rain.push({ obj: puff, speed: 14 + (i % 4) * 5 });
     }
   }
   return {

@@ -366,6 +366,13 @@ export class EgaraScene extends Phaser.Scene {
     persistSave(save);
     this.audio.play('win');
 
+    if (chapter.id === 'ch6') {
+      this.fx?.killBurst(this.world.player.x, this.world.player.y - 60, true);
+      this.fx?.killBurst(240, 270, true);
+      this.fx?.killBurst(720, 270, true);
+      this.shake.add(0.8);
+    }
+
     const best = save.chapters[chapter.id]?.best ?? this.world.score;
     this.hud.showMenu(
       translate(save.lang, 'story.complete'),

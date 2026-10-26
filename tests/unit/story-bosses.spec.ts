@@ -98,6 +98,7 @@ describe('exorcist boss', () => {
   it('ch6 validates and escapes the exorcist headless', () => {    const ch6 = CHAPTERS.find((c) => c.id === 'ch6');
     expect(ch6).toBeDefined();
     expect(validateChapter(ch6)).toEqual([]);
+    expect(ch6!.shards.map((s) => s.id)).toEqual(['ember-1', 'ember-2']);
 
     const world = createWorld(33, EGARA_TUNING, ch6!.loadout);
     setParanoia(world, ch6!.paranoia);
