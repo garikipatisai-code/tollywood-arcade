@@ -42,6 +42,7 @@ import {
   hazardActive,
   placeHazards,
   placeShards,
+  placeSlowZones,
   placeWindZones,
   setParanoia,
   setShardSlots,
@@ -147,6 +148,7 @@ export class EgaraScene extends Phaser.Scene {
       placeShards(this.world, this.chapter.shards);
       placeHazards(this.world, this.chapter.hazards ?? []);
       placeWindZones(this.world, this.chapter.wind ?? []);
+      placeSlowZones(this.world, this.chapter.slow ?? []);
       setShardSlots(this.world, BASE_SHARD_SLOTS + (this.ngplus ? 1 : 0));
       this.director = createDirector(this.chapter.waves);
     } else {
@@ -249,6 +251,12 @@ export class EgaraScene extends Phaser.Scene {
     if (this.chapter) {
       this.world.runFramesMax = this.chapter.timeSeconds * 60;
       this.worldView?.showWind(this.chapter.wind ?? []);
+      if ((this.chapter.slow ?? []).length > 0) {
+        this.worldView?.showWind(
+          this.chapter.slow.map((zone) => ({ x: zone.x, y: zone.y, r: zone.r })),
+          0xd8a04b
+        );
+      }
       this.paused = true;
       const cut = CUTSCENES.find((c) => c.id === this.chapter!.id);
       const base = `${import.meta.env.BASE_URL}assets/vendor/kenney`;

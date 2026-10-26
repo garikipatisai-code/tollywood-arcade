@@ -126,6 +126,15 @@ export interface WindZone {
   on: number;
 }
 
+export interface SlowZone {
+  id: string;
+  x: number;
+  y: number;
+  r: number;
+  /** Input speed multiplier inside the fumes. */
+  factor: number;
+}
+
 export interface World {
   tuning: Tuning;
   seed: number;
@@ -142,6 +151,7 @@ export interface World {
   shards: Shard[];
   hazards: Hazard[];
   wind: WindZone[];
+  slow: SlowZone[];
   /** Scored shard slots (base 2, +1 with the wing amulet). */
   shardSlots: number;
   shardsUsed: number;
@@ -189,6 +199,7 @@ export function createWorld(seed: number, tuning: Tuning, loadout: Loadout = DEF
     shards: [],
     hazards: [],
     wind: [],
+    slow: [],
     shardSlots: 0,
     shardsUsed: 0,
     events: [],
@@ -254,6 +265,14 @@ export function placeWindZones(
   zones: { id: string; x: number; y: number; r: number; dx: number; dy: number; period?: number; on?: number }[]
 ): void {
   world.wind = zones.map((zone) => ({ period: 0, on: 0, ...zone }));
+}
+
+/** Fume banks: speed-factor fields. Placed per chapter. */
+export function placeSlowZones(
+  world: World,
+  zones: { id: string; x: number; y: number; r: number; factor: number }[]
+): void {
+  world.slow = zones.map((zone) => ({ ...zone }));
 }
 /** Deterministic PRNG. State lives in the world so a replay can reproduce it. */
 export function nextRandom(world: World): number {
@@ -330,8 +349,16 @@ function fixToArray(world: World, input: SimInput): void {
   const { player, tuning } = world;
   const radius = tuning.player.radius;
 
-  player.x = clamp(player.x + input.x * tuning.player.speed * STEP, radius, tuning.width - radius);
-  player.y = clamp(player.y + input.y * tuning.player.speed * STEP, radius, tuning.height - radius);
+  let grip = 1;
+  for (const zone of world.slow) {
+    const dx = player.x - zone.x;
+    const dy = player.y - zone.y;
+    if (dx * dx + dy * dy > zone.r * zone.r) continue;
+    grip = Math.min(grip, zone.factor);
+  }
+
+  player.x = clamp(player.x + input.x * tuning.player.speed * grip * STEP, radius, tuning.width - radius);
+  player.y = clamp(player.y + input.y * tuning.player.speed * grip * STEP, radius, tuning.height - radius);
 
   for (const zone of world.wind) {
     if (!hazardActive(zone, world.tick)) continue;

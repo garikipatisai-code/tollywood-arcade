@@ -53,6 +53,10 @@ export interface WorldTheme {
   locketWindow?: { x: number; y: number };
   workshop?: boolean;
   highway?: boolean;
+  nets?: { x: number; w: number; h: number }[];
+  coils?: { x: number; y: number }[];
+  vaporizers?: { x: number; y: number }[];
+  placard?: { x: number; y: number };
   books?: BookSpine[];
   cupLake?: { x: number; y: number; rx: number; ry: number };
   lamp?: { x: number; y: number };
@@ -197,8 +201,25 @@ export const THEMES: Record<string, WorldTheme> = {
     castles: false,
     props: [{ tex: 'dung-56', x: 480, y: 480, scale: 3, tint: BERING }],
     clouds: 3,
-    glows: [{ x: 480, y: 460, color: 0x90ff60, scale: 2 }],
-    torchAtGlows: false
+    glows: [
+      { x: 300, y: 400, color: 0xffb060, scale: 1.6 },
+      { x: 660, y: 400, color: 0xffb060, scale: 1.6 },
+      { x: 480, y: 460, color: 0x90ff60, scale: 2 }
+    ],
+    torchAtGlows: false,
+    nets: [
+      { x: 180, w: 150, h: 250 },
+      { x: 630, w: 150, h: 250 }
+    ],
+    coils: [
+      { x: 300, y: 452 },
+      { x: 660, y: 452 }
+    ],
+    vaporizers: [
+      { x: 90, y: 300 },
+      { x: 870, y: 300 }
+    ],
+    placard: { x: 480, y: 110 }
   },
   ch6: {
     skyTop: 0x140e28,
@@ -282,7 +303,7 @@ export interface WorldView {
   update(dt: number): void;
   setGlows(on: boolean): void;
   /** Soft decals marking wind zones so gusts read before they push. */
-  showWind(zones: { x: number; y: number; r: number }[]): void;
+  showWind(zones: { x: number; y: number; r: number }[], tint?: number): void;
 }
 
 interface Drifter {
@@ -474,8 +495,77 @@ export function buildWorld(scene: Phaser.Scene, themeKey: string, opts: { glows?
     deco.fillCircle(lock.x - 9 * s, lock.y - 9 * s, 3 * s);
   }
 
-  if (theme.highway) {
-    // City-glow horizon + asphalt with lane dashes.
+  if (theme.nets) {
+    for (const net of theme.nets) {
+      deco.fillStyle(0xf3ecdd, 0.16);
+      deco.fillRect(net.x, 0, net.w, net.h);
+      deco.lineStyle(1, 0xf3ecdd, 0.35);
+      for (let lx = net.x + 12; lx < net.x + net.w; lx += 14) {
+        deco.lineBetween(lx, 0, lx, net.h);
+      }
+      for (let ly = 14; ly < net.h; ly += 16) {
+        deco.lineBetween(net.x, ly, net.x + net.w, ly);
+      }
+      deco.fillStyle(0xf3ecdd, 0.5);
+      deco.fillRect(net.x, net.h - 8, net.w, 8);
+      deco.fillStyle(0x8a8598, 1);
+      deco.fillRect(net.x + net.w / 2 - 4, 0, 8, 18);
+    }
+  }
+
+  if (theme.coils) {
+    for (const coil of theme.coils) {
+      deco.fillStyle(0x2e2a38, 1);
+      deco.fillEllipse(coil.x, coil.y, 56, 20);
+      deco.lineStyle(4, 0x8a7a4a, 1);
+      deco.strokeCircle(coil.x, coil.y - 12, 12);
+      deco.strokeCircle(coil.x, coil.y - 12, 6);
+      deco.fillStyle(0xe07b39, 1);
+      deco.fillCircle(coil.x, coil.y - 12, 3);
+    }
+  }
+
+  if (theme.vaporizers) {
+    for (const vap of theme.vaporizers) {
+      deco.fillStyle(0x2e8e9e, 1);
+      deco.fillRoundedRect(vap.x - 20, vap.y - 30, 40, 56, 6);
+      deco.fillStyle(0xf3ecdd, 1);
+      deco.fillRect(vap.x - 12, vap.y - 20, 24, 18);
+      deco.fillStyle(0x3fa7d6, 1);
+      deco.fillCircle(vap.x, vap.y + 16, 5);
+      deco.fillStyle(0x14101c, 1);
+      deco.fillRect(vap.x - 3, vap.y - 44, 6, 14);
+    }
+  }
+
+  if (theme.placard) {
+    const pl = theme.placard;
+    deco.fillStyle(0x8e2f2f, 1);
+    deco.fillRect(pl.x - 110, pl.y - 34, 220, 68);
+    deco.lineStyle(3, 0xf3ecdd, 1);
+    deco.strokeRect(pl.x - 110, pl.y - 34, 220, 68);
+    deco.fillStyle(0x2e2a38, 1);
+    deco.fillRect(pl.x - 80, pl.y + 34, 10, 50);
+    deco.fillRect(pl.x + 70, pl.y + 34, 10, 50);
+    scene.add
+      .text(pl.x, pl.y - 8, '⚠ PEST CONTROL', {
+        fontFamily: 'system-ui, sans-serif',
+        fontSize: '20px',
+        color: '#ffd94d'
+      })
+      .setOrigin(0.5)
+      .setDepth(-9);
+    scene.add
+      .text(pl.x, pl.y + 16, 'జాగ్రత్త', {
+        fontFamily: '"Noto Sans Telugu", "Noto Sans", system-ui, sans-serif',
+        fontSize: '18px',
+        color: '#f3ecdd'
+      })
+      .setOrigin(0.5)
+      .setDepth(-9);
+  }
+
+  if (theme.highway) {    // City-glow horizon + asphalt with lane dashes.    // City-glow horizon + asphalt with lane dashes.
     deco.fillStyle(0xe08a4e, 0.22);
     deco.fillRect(0, 250, 960, 50);
     deco.fillStyle(0x1d1d28, 1);
@@ -703,13 +793,17 @@ export function buildWorld(scene: Phaser.Scene, themeKey: string, opts: { glows?
   };
   setGlows(opts.glows ?? true);
   const windLayer = scene.add.graphics().setDepth(-6);
-  const showWind = (zones: { x: number; y: number; r: number }[]) => {
+  const decals: { zones: { x: number; y: number; r: number }[]; tint: number }[] = [];
+  const showWind = (zones: { x: number; y: number; r: number }[], tint = 0xa8e6e0) => {
+    decals.push({ zones, tint });
     windLayer.clear();
-    for (const zone of zones) {
-      windLayer.fillStyle(0xa8e6e0, 0.07);
-      windLayer.fillEllipse(zone.x, zone.y, zone.r * 2, zone.r * 2);
-      windLayer.fillStyle(0xa8e6e0, 0.1);
-      windLayer.fillEllipse(zone.x, zone.y, zone.r * 1.2, zone.r * 1.2);
+    for (const decal of decals) {
+      for (const zone of decal.zones) {
+        windLayer.fillStyle(decal.tint, 0.07);
+        windLayer.fillEllipse(zone.x, zone.y, zone.r * 2, zone.r * 2);
+        windLayer.fillStyle(decal.tint, 0.1);
+        windLayer.fillEllipse(zone.x, zone.y, zone.r * 1.2, zone.r * 1.2);
+      }
     }
   };
   const rain: { obj: Phaser.GameObjects.Image; speed: number }[] = [];

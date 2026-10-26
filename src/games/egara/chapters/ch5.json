@@ -6,6 +6,10 @@
   "loadout": { "needle": true, "armor": true, "cannon": false },
   "timeSeconds": 105,
   "minFrames": 0,
+  "slow": [
+    { "id": "coil-west", "x": 300, "y": 420, "r": 95, "factor": 0.45 },
+    { "id": "coil-east", "x": 660, "y": 420, "r": 95, "factor": 0.45 }
+  ],
   "requiredShards": ["nest-1", "nest-2"],
   "waves": [
     { "atSeconds": 3, "kind": "spider", "count": 1, "pattern": "top" },
