@@ -6,7 +6,11 @@
   "loadout": { "needle": true, "armor": false, "cannon": false },
   "timeSeconds": 75,
   "minFrames": 0,
-  "requiredShards": [],
+  "requiredShards": ["gate-1", "gate-2"],
   "waves": [{ "atSeconds": 2, "kind": "swatter", "count": 2, "pattern": "top" }],
-  "shards": [{ "id": "workshop-1", "x": 480, "y": 200 }]
+  "shards": [
+    { "id": "gate-1", "x": 240, "y": 400 },
+    { "id": "gate-2", "x": 720, "y": 400 },
+    { "id": "workshop-1", "x": 480, "y": 200 }
+  ]
 }

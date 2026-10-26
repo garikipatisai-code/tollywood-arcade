@@ -135,6 +135,7 @@ describe('chapters 1-3', () => {
     const ch3 = CHAPTERS[2];
     expect(ch3.loadout).toEqual({ needle: true, armor: false, cannon: false });
     expect(ch3.waves.length).toBeGreaterThan(0);
+    expect(ch3.requiredShards).toEqual(['gate-1', 'gate-2']);
     const result = playChapter(ch3);
     expect(result.status).toBe('complete');
   });

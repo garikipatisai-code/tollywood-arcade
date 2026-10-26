@@ -51,6 +51,7 @@ export interface WorldTheme {
   swags?: { x0: number; y0: number; x1: number; y1: number }[];
   auto?: boolean;
   locketWindow?: { x: number; y: number };
+  workshop?: boolean;
   books?: BookSpine[];
   cupLake?: { x: number; y: number; rx: number; ry: number };
   lamp?: { x: number; y: number };
@@ -158,7 +159,8 @@ export const THEMES: Record<string, WorldTheme> = {
       { x: 130, y: 400, color: 0xff9a3d, scale: 2.2 },
       { x: 830, y: 420, color: 0xff9a3d, scale: 2.2 }
     ],
-    torchAtGlows: true
+    torchAtGlows: true,
+    workshop: true
   },
   ch4: {
     skyTop: 0x4e1d2e,
@@ -467,6 +469,95 @@ export function buildWorld(scene: Phaser.Scene, themeKey: string, opts: { glows?
     deco.fillTriangle(lock.x - 14 * s, lock.y - s, lock.x + 14 * s, lock.y - s, lock.x, lock.y + 14 * s);
     deco.fillStyle(0xffffff, 0.55);
     deco.fillCircle(lock.x - 9 * s, lock.y - 9 * s, 3 * s);
+  }
+
+  if (theme.workshop) {
+    // Pegboard wall with hanging tools.
+    deco.fillStyle(0x6e4a2e, 1);
+    deco.fillRect(60, 60, 840, 130);
+    deco.fillStyle(0x4a2f1d, 1);
+    for (let gx = 80; gx < 880; gx += 28) {
+      for (let gy = 78; gy < 178; gy += 24) deco.fillCircle(gx, gy, 2.5);
+    }
+    deco.lineStyle(5, 0xc9c4d4, 1);
+    deco.lineBetween(200, 90, 200, 160);
+    deco.lineBetween(740, 90, 760, 160);
+    deco.fillStyle(0xd05a5a, 1);
+    deco.fillCircle(200, 168, 9);
+    deco.fillRect(752, 160, 16, 16);
+
+    // Blueprint papers: needle + cannon sketches.
+    for (const [bx, by] of [[70, 210], [790, 210]]) {
+      deco.fillStyle(0xe8ded0, 1);
+      deco.fillRect(bx, by, 100, 70);
+      deco.lineStyle(2, 0x2e4a6e, 1);
+      deco.lineBetween(bx + 12, by + 35, bx + 88, by + 35);
+      deco.lineBetween(bx + 50, by + 12, bx + 50, by + 58);
+      deco.strokeCircle(bx + 72, by + 48, 10);
+    }
+
+    // Thread spools.
+    for (const [sx, sy, col] of [[130, 400, 0xd05a5a], [200, 415, 0x2e8e8e]] as const) {
+      deco.fillStyle(0x8a5a30, 1);
+      deco.fillRect(sx - 20, sy - 44, 40, 56);
+      deco.fillStyle(col, 1);
+      deco.fillRect(sx - 20, sy - 36, 40, 40);
+      deco.fillStyle(0x5a3a20, 1);
+      deco.fillRect(sx - 26, sy - 50, 52, 8);
+      deco.fillRect(sx - 26, sy + 12, 52, 8);
+    }
+
+    // Thimble dome.
+    deco.fillStyle(0x8a8598, 1);
+    deco.fillEllipse(480, 330, 90, 64);
+    deco.fillStyle(0xc9c4d4, 1);
+    deco.fillEllipse(474, 322, 70, 46);
+    deco.fillStyle(0x5a5468, 1);
+    for (let dx = -24; dx <= 24; dx += 12) {
+      for (let dy = -12; dy <= 12; dy += 12) deco.fillCircle(474 + dx, 322 + dy, 2);
+    }
+
+    // Pincushion with needle rack.
+    deco.fillStyle(0x8e2f2f, 1);
+    deco.fillEllipse(770, 420, 110, 56);
+    deco.fillStyle(0xd05a5a, 1);
+    deco.fillEllipse(764, 412, 90, 40);
+    deco.lineStyle(4, 0xc9c4d4, 1);
+    for (const [nx, lean] of [[730, -14], [755, -6], [782, 4], [806, 12]] as const) {
+      deco.lineBetween(nx, 400, nx + lean, 300);
+      deco.strokeCircle(nx + lean, 296, 5);
+    }
+
+    // Treadmill belt with rollers.
+    deco.fillStyle(0x2e2a38, 1);
+    deco.fillRoundedRect(360, 452, 240, 30, 14);
+    deco.fillStyle(0x8a8598, 1);
+    deco.fillCircle(372, 467, 12);
+    deco.fillCircle(588, 467, 12);
+    deco.fillStyle(0x2e2a38, 1);
+    deco.fillCircle(372, 467, 5);
+    deco.fillCircle(588, 467, 5);
+    deco.lineStyle(3, 0xc9c4d4, 1);
+    deco.lineBetween(360, 444, 600, 444);
+
+    // Dumbbells.
+    for (const dx of [300, 660]) {
+      deco.fillStyle(0x5a5468, 1);
+      deco.fillRect(dx - 34, 446, 68, 8);
+      deco.fillStyle(0x2e2a38, 1);
+      deco.fillRect(dx - 40, 436, 12, 28);
+      deco.fillRect(dx + 28, 436, 12, 28);
+    }
+
+    // Covered cannon in the corner (foreshadowing).
+    deco.fillStyle(0x3e4a3e, 1);
+    deco.fillTriangle(852, 230, 928, 230, 918, 120);
+    deco.fillTriangle(852, 230, 890, 120, 918, 120);
+    deco.fillStyle(0x2e382e, 1);
+    deco.fillRect(848, 226, 84, 10);
+    deco.lineStyle(3, 0x8a7a4a, 1);
+    deco.lineBetween(870, 228, 878, 160);
+    deco.lineBetween(910, 228, 902, 160);
   }
 
   for (let i = 0; i < 15; i++) {
