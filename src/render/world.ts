@@ -53,6 +53,7 @@ export interface WorldTheme {
   locketWindow?: { x: number; y: number };
   workshop?: boolean;
   highway?: boolean;
+  mansion?: boolean;
   sanctum?: boolean;
   ash?: number;
   nets?: { x: number; w: number; h: number }[];
@@ -263,9 +264,14 @@ export const THEMES: Record<string, WorldTheme> = {
     clouds: 2,
     glows: [
       { x: 330, y: 430, color: 0xffb060, scale: 1.8 },
-      { x: 630, y: 430, color: 0xffb060, scale: 1.8 }
+      { x: 630, y: 430, color: 0xffb060, scale: 1.8 },
+      { x: 480, y: 150, color: 0xffe9a8, scale: 2.2 },
+      { x: 120, y: 410, color: 0xffb060, scale: 1.6 },
+      { x: 300, y: 110, color: 0xd03a3a, scale: 0.7 },
+      { x: 660, y: 110, color: 0xd03a3a, scale: 0.7 }
     ],
-    torchAtGlows: true
+    torchAtGlows: true,
+    mansion: true
   },
   ch8: {
     skyTop: 0x38140e,
@@ -628,6 +634,71 @@ export function buildWorld(scene: Phaser.Scene, themeKey: string, opts: { glows?
     deco.fillEllipse(540, 120, 26, 18);
     deco.fillStyle(0xffd94d, 1);
     deco.fillEllipse(540, 116, 12, 10);
+  }
+
+  if (theme.mansion) {
+    // Pillar colonnade across the back.
+    for (let i = 0; i < 6; i++) {
+      const px = 80 + i * 160;
+      deco.fillStyle(0x8a8a9a, 1);
+      deco.fillRect(px - 22, 120, 44, 150);
+      deco.fillStyle(0xb0b0c0, 1);
+      deco.fillRect(px - 22, 120, 14, 150);
+      deco.fillStyle(0x6a6a7a, 1);
+      deco.fillRect(px - 30, 108, 60, 14);
+      deco.fillRect(px - 30, 268, 60, 14);
+    }
+    // Chandelier: chain, arms, candles.
+    deco.lineStyle(4, 0x2e2a38, 1);
+    deco.lineBetween(480, 0, 480, 96);
+    deco.fillStyle(0x8a6a2a, 1);
+    deco.fillCircle(480, 120, 10);
+    for (const ax of [430, 455, 505, 530]) {
+      deco.lineStyle(3, 0x8a6a2a, 1);
+      deco.lineBetween(480, 118, ax, 140);
+      deco.fillStyle(0xf3ecdd, 1);
+      deco.fillRect(ax - 3, 128, 6, 14);
+      deco.fillStyle(0xffd94d, 1);
+      deco.fillCircle(ax, 126, 4);
+    }
+    // Marble checker floor.
+    for (let mx = 0; mx < 960; mx += 48) {
+      for (let my = 360; my < 476; my += 48) {
+        const even = (mx / 48 + my / 48) % 2 === 0;
+        deco.fillStyle(even ? 0xd8d0c0 : 0x2e2e3e, 1);
+        deco.fillRect(mx, my, 48, 44);
+      }
+    }
+    // Pooja corner: brass stand, idol glow, diyas.
+    deco.fillStyle(0x8a6a2a, 1);
+    deco.fillRect(88, 400, 64, 10);
+    deco.fillRect(116, 340, 8, 60);
+    deco.fillStyle(0xe8b93d, 1);
+    deco.fillEllipse(120, 330, 30, 40);
+    deco.fillStyle(0xfff2b0, 1);
+    deco.fillCircle(120, 322, 6);
+    for (const [dx, dy] of [[96, 392], [144, 392]] as const) {
+      deco.fillStyle(0x8a5a30, 1);
+      deco.fillEllipse(dx, dy, 18, 9);
+      deco.fillStyle(0xffd94d, 1);
+      deco.fillEllipse(dx, dy - 7, 7, 9);
+    }
+    // CCTV domes with red eyes.
+    for (const cx of [300, 660]) {
+      deco.fillStyle(0x1d1d28, 1);
+      deco.fillCircle(cx, 96, 16);
+      deco.fillStyle(0x2e2e3e, 1);
+      deco.fillRect(cx - 16, 78, 32, 8);
+      deco.fillStyle(0xd03a3a, 1);
+      deco.fillCircle(cx, 100, 4);
+    }
+    // Lawn strip with pool shimmer.
+    deco.fillStyle(0x1e4e1e, 1);
+    deco.fillRect(0, 300, 90, 60);
+    deco.fillStyle(0x3fa7d6, 1);
+    deco.fillEllipse(45, 330, 66, 30);
+    deco.fillStyle(0xa8e6f0, 0.8);
+    deco.fillEllipse(36, 326, 30, 8);
   }
 
   if (theme.highway) {    // City-glow horizon + asphalt with lane dashes.    // City-glow horizon + asphalt with lane dashes.

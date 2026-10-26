@@ -111,7 +111,7 @@ export interface Hazard {
   /** Drift velocity in px/s; wraps around the extended bounds. */
   vx: number;
   vy: number;
-  kind: 'ring' | 'car';
+  kind: 'ring' | 'car' | 'guard';
 }
 
 export interface WindZone {

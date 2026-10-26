@@ -689,6 +689,10 @@ export class EgaraScene extends Phaser.Scene {
         this.drawCar(g, hazard.x + ox, hazard.y + oy, hazard.r, hazard.vx >= 0 ? 1 : -1);
         continue;
       }
+      if (hazard.kind === 'guard') {
+        this.drawGuard(g, hazard.x + ox, hazard.y + oy, hazard.r, hazard.vx >= 0 ? 1 : -1);
+        continue;
+      }
       g.lineStyle(3, COLORS.ring, 0.9);
       g.strokeCircle(hazard.x + ox, hazard.y + oy, hazard.r);
       g.lineStyle(1, COLORS.ring, 0.35);
@@ -745,6 +749,31 @@ export class EgaraScene extends Phaser.Scene {
     g.fillStyle(0xd05a5a, 1);
     g.fillCircle(x - (w / 2) * dir, y - 2, 3.5);
     g.fillCircle(x - (w / 2) * dir, y + 8, 3.5);
+  }
+
+  private drawGuard(g: Phaser.GameObjects.Graphics, x: number, y: number, r: number, dir: number): void {
+    const s = r / 22;
+    // Legs + boots.
+    g.fillStyle(0x1d1d28, 1);
+    g.fillRect(x - 9 * s, y + 8 * s, 7 * s, 14 * s);
+    g.fillRect(x + 2 * s, y + 8 * s, 7 * s, 14 * s);
+    // Navy uniform torso.
+    g.fillStyle(0x2e3a5e, 1);
+    g.fillRoundedRect(x - 11 * s, y - 10 * s, 22 * s, 20 * s, 4 * s);
+    g.fillStyle(0xe8b93d, 1);
+    g.fillRect(x - 11 * s, y + 2 * s, 22 * s, 3 * s);
+    // Head + cap + red visor dot.
+    g.fillStyle(0x8a5a3a, 1);
+    g.fillCircle(x, y - 16 * s, 7 * s);
+    g.fillStyle(0x1d1d28, 1);
+    g.fillRect(x - 8 * s, y - 26 * s, 16 * s, 7 * s);
+    g.fillStyle(0xd05a5a, 1);
+    g.fillCircle(x + 6 * s * dir, y - 16 * s, 2.5 * s);
+    // Spray wand aimed forward.
+    g.lineStyle(3 * s, 0x8a8598, 1);
+    g.lineBetween(x + 8 * s * dir, y + 2 * s, x + 24 * s * dir, y - 6 * s);
+    g.fillStyle(0x6ec6b8, 1);
+    g.fillCircle(x + 24 * s * dir, y - 6 * s, 3 * s);
   }
 
   private teardown(): void {    this.stopCapture();

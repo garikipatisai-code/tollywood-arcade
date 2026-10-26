@@ -151,8 +151,7 @@ describe('chapters 1-3', () => {
   });
 });
 
-describe('chapters 4-5', () => {
-  it('ch4 debuts the paranoia meter with sabotage targets', () => {
+describe('chapters 4-5', () => {  it('ch4 debuts the paranoia meter with sabotage targets', () => {
     const ch4 = CHAPTERS[3];
     expect(ch4.paranoia).toBe(40);
     expect(ch4.loadout.needle).toBe(true);
@@ -168,6 +167,15 @@ describe('chapters 4-5', () => {
     expect(ch5.loadout).toEqual({ needle: true, armor: true, cannon: false });
     expect(ch5.slow).toHaveLength(2);
     const result = playChapter(ch5);
+    expect(result.status).toBe('complete');
+  });
+});
+
+describe('chapters 6-8', () => {
+  it('ch7 patrols the mansion but still clears', () => {
+    const ch7 = CHAPTERS[6];
+    expect(ch7.hazards.filter((h) => h.kind === 'guard')).toHaveLength(2);
+    const result = playChapter(ch7);
     expect(result.status).toBe('complete');
   });
 });

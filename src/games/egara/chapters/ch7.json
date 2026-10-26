@@ -8,6 +8,10 @@
   "minFrames": 0,
   "tint": 15740426,
   "requiredShards": ["shilpi"],
+  "hazards": [
+    { "id": "patrol-west", "x": -60, "y": 300, "r": 26, "vx": 90, "kind": "guard" },
+    { "id": "patrol-east", "x": 1020, "y": 420, "r": 26, "vx": -110, "kind": "guard" }
+  ],
   "waves": [
     { "atSeconds": 5, "kind": "spray", "count": 2, "pattern": "sides" },
     { "atSeconds": 25, "kind": "swatter", "count": 3, "pattern": "random" },

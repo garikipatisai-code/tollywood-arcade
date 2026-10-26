@@ -51,6 +51,19 @@ describe('traffic hazards', () => {
     expect(world.lives).toBe(2);
   });
 
+  it('guards patrol, wrap and wound', () => {
+    const world = createWorld(65, tuning);
+    placeHazards(world, [{ id: 'guard', x: 0, y: 150, r: 22, vx: 120, kind: 'guard' }]);
+    expect(world.hazards[0].kind).toBe('guard');
+    for (let i = 0; i < 30; i++) stepWorld(world, idle);
+    expect(world.hazards[0].x).toBeCloseTo(60, 0);
+
+    const victim = createWorld(66, tuning);
+    placeHazards(victim, [{ id: 'guard', x: victim.player.x, y: victim.player.y, r: 30, kind: 'guard' }]);
+    stepWorld(victim, idle);
+    expect(victim.lives).toBe(2);
+  });
+
   it('keeps blink behavior on moving hazards', () => {
     expect(hazardActive({ period: 60, on: 30 }, 10)).toBe(true);
     expect(hazardActive({ period: 60, on: 30 }, 45)).toBe(false);

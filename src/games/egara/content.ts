@@ -217,7 +217,7 @@ export function validateChapter(raw: unknown): string[] {
     if (!hazard || !Number.isFinite(hazard.period) || hazard.period < 0 || !Number.isFinite(hazard.on) || hazard.on < 0) {
       errors.push(`hazard ${hazard?.id} needs a valid blink cycle`);
     }
-    if (hazard && hazard.kind !== undefined && hazard.kind !== 'ring' && hazard.kind !== 'car') {
+    if (hazard && hazard.kind !== undefined && hazard.kind !== 'ring' && hazard.kind !== 'car' && hazard.kind !== 'guard') {
       errors.push(`hazard ${hazard.id} needs a known kind`);
     }
     if (
