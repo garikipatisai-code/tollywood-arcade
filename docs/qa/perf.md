@@ -38,6 +38,7 @@ npm run assets   # per-game assets ≤5 MiB, licences present
 | v3.2-ch2 | — | — | — | — | — | — | updrafts reuse wind; bedroom screenshot-verified; budgets hold; live 200 |
 | v3.3-ch3 | — | — | — | — | — | — | training gates; workbench screenshot-verified; budgets hold; live 200 |
 | v3.4-ch4 | — | — | — | — | — | — | traffic hazards; highway screenshot-verified; budgets hold; live 200 |
+| v3.5-ch5 | — | — | — | — | — | — | fume slow zones; siege screenshot-verified; y-clamp regression fixed; live 200 |
 
 Automated numbers are not a substitute for the manual row; leave it blank until
 the device run happens.
