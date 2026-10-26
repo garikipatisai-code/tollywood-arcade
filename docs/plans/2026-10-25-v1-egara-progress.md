@@ -15,8 +15,10 @@ Gate: active (approved 2026-10-26T04:10:14Z by garikipatisai-code)
 | 7 Egara content | done | 38 unit tests; `npx playwright test tests/smoke/` → 2 passed (boot, pause/resume, 0 errors) |
 | 8 Art + credits | done | `npm run assets` → 6 files, 79.4 KiB, all CC0; original 16×16 sheet + 5 WAVs |
 | 9 A11y + perf | done | `npx playwright test tests/smoke/` → 5 passed (TE toggle, mute, remap, pause); `node scripts/check-budget.mjs` → hub 1.3 KB, egara 353 KB gz |
-| 10 Deploy | pending | — |
+| 10 Deploy | done | https://garikipatisai-code.github.io/tollywood-arcade/ (Pages workflow run 40269463533, live Playwright passed) |
 
 ## Log
 
 - 2026-10-26T04:10Z — spec gate approved and activated.
+- 2026-10-26T04:31Z — public repo created, Pages enabled, live URL verified.
+- Deviations (in-scope, recorded): tuning JSON lives in `src/games/egara/` (Vite cannot import `public/`); art/audio generated as original CC0 instead of Kenney downloads; audio smoke moved from T5 to T9.
