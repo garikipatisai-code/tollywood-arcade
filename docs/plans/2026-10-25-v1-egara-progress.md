@@ -22,3 +22,5 @@ Gate: active (approved 2026-10-26T04:10:14Z by garikipatisai-code)
 - 2026-10-26T04:10Z — spec gate approved and activated.
 - 2026-10-26T04:31Z — public repo created, Pages enabled, live URL verified.
 - Deviations (in-scope, recorded): tuning JSON lives in `src/games/egara/` (Vite cannot import `public/`); art/audio generated as original CC0 instead of Kenney downloads; audio smoke moved from T5 to T9.
+- 2026-10-26T04:37Z — final verification (fresh): unit 38/38, tsc clean, build OK, assets 79.4 KiB licensed, budget hub 1.3 KB / egara 353 KB gz, smoke 5/5, live hub+game HTTP 200, gate OK, worktree clean, no secrets.
+- Review: `code-reviewer` subagent unavailable (free usage limit). Orchestrator self-review instead: no innerHTML/eval (textContent only); HUD handlers overwrite-safe (`onclick`); all window listeners removed on SHUTDOWN; HUD appended once (no duplication on restart); no debug leftovers.
